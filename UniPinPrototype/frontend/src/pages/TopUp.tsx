@@ -4,12 +4,14 @@ import { useTopUp } from '../context/TopUpContext';
 import { useState } from 'react';
 
 const PACKAGES = [
-  { id: '1', diamonds: 50, price: 0.99, bonus: 0 },
-  { id: '2', diamonds: 250, price: 4.99, bonus: 25, popular: true },
-  { id: '3', diamonds: 500, price: 9.99, bonus: 50 },
-  { id: '4', diamonds: 1000, price: 19.99, bonus: 150 },
-  { id: '5', diamonds: 2500, price: 48.99, bonus: 400 },
-  { id: '6', diamonds: 5000, price: 94.99, bonus: 1000 },
+  { id: '1', diamonds: 50, price: 1.00, bonus: 0 },
+  { id: '2', diamonds: 250, price: 5.00, bonus: 25 },
+  { id: '3', diamonds: 500, price: 10.00, bonus: 65 },
+  { id: '4', diamonds: 1000, price: 20.00, bonus: 150 },
+  { id: '5', diamonds: 2500, price: 50.00, bonus: 450 },
+  { id: '6', diamonds: 5000, price: 100.00, bonus: 1000 },
+  { id: '7', diamonds: 10000, price: 200.00, bonus: 2500 },
+  { id: '8', diamonds: 25000, price: 500.00, bonus: 7500 },
 ];
 
 const GAME_INFO: Record<string, { title: string, img: string }> = {

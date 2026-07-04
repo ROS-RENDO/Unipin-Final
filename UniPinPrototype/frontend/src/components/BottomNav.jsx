@@ -1,9 +1,9 @@
-import { FiHome, FiGrid, FiClock, FiUser } from 'react-icons/fi'
+import { FiCompass, FiClock, FiHome, FiUser } from 'react-icons/fi'
 import { NavLink } from 'react-router-dom'
 
 const links = [
   { to: '/', label: 'Home', icon: FiHome },
-  { to: '/games', label: 'Games', icon: FiGrid },
+  { to: '/games', label: 'Games', icon: FiCompass },
   { to: '/history', label: 'History', icon: FiClock },
   { to: '/profile', label: 'Profile', icon: FiUser },
 ]
@@ -17,7 +17,7 @@ export default function BottomNav() {
             key={to}
             to={to}
             className={({ isActive }) =>
-              `flex flex-1 flex-col items-center rounded-3xl px-3 py-2 text-xs font-medium transition ${isActive ? 'bg-cyan-500/15 text-cyan-300' : 'text-slate-400 hover:text-slate-200'}`
+              `flex flex-1 flex-col items-center rounded-2xl px-3 py-2 text-xs font-medium transition ${isActive ? 'bg-cyan-500/15 text-cyan-300' : 'text-slate-400 hover:text-slate-200'}`
             }
           >
             <Icon size={18} />

@@ -1,35 +1,43 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { AppProvider } from './context/AppContext'
-import Home from './pages/Home'
-import History from './pages/History'
-import Payment from './pages/Payment'
-import Profile from './pages/Profile'
-import Topup from './pages/Topup'
-import BottomNav from './components/BottomNav'
-import Navbar from './components/Navbar'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+import { TopUpProvider } from './context/TopUpContext';
+import { Layout } from './components/Layout';
+import { Home } from './pages/Home';
+import { Games } from './pages/Games';
+import { TopUp } from './pages/TopUp';
+import { Payment } from './pages/Payment';
+import { History } from './pages/History';
 
 function App() {
   return (
-    <AppProvider>
-      <BrowserRouter>
-        <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.18),_transparent_30%),linear-gradient(135deg,_#030712_0%,_#050816_30%,_#111827_100%)] text-slate-100">
-          <Navbar />
-          <main className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-24 pt-4 sm:px-6 lg:px-8">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/games" element={<Topup />} />
-              <Route path="/topup" element={<Topup />} />
-              <Route path="/payment" element={<Payment />} />
-              <Route path="/history" element={<History />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </main>
-          <BottomNav />
-        </div>
-      </BrowserRouter>
-    </AppProvider>
-  )
+    <TopUpProvider>
+      <Router>
+        <Routes>
+          {/* Layout covers pages that need the bottom nav */}
+          <Route path="/" element={<Layout />}>
+            <Route index element={<Home />} />
+            <Route path="games" element={<Games />} />
+            <Route path="history" element={<History />} />
+            <Route path="profile" element={<Navigate to="/" replace />} />
+          </Route>
+          
+          {/* Fullscreen pages without bottom nav */}
+          <Route path="/topup/:gameId" element={<TopUp />} />
+          <Route path="/payment" element={<Payment />} />
+        </Routes>
+      </Router>
+      <Toaster 
+        position="top-center" 
+        toastOptions={{
+          style: {
+            background: '#1e293b',
+            color: '#fff',
+            border: '1px solid #334155'
+          }
+        }} 
+      />
+    </TopUpProvider>
+  );
 }
 
-export default App
+export default App;

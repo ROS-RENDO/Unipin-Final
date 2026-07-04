@@ -1,6 +1,0 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { FiBell, FiSearch, FiUser } from 'react-icons/fi';
-import { Link } from 'react-router-dom';
-export default function Navbar() {
-    return (_jsx("header", { className: "sticky top-0 z-30 border-b border-white/10 bg-slate-950/80 backdrop-blur-xl", children: _jsxs("div", { className: "mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8", children: [_jsxs(Link, { to: "/", className: "flex items-center gap-3", children: [_jsx("div", { className: "flex h-10 w-10 items-center justify-center rounded-3xl bg-cyan-500 text-lg font-black text-slate-950", children: "N" }), _jsx("div", { children: _jsx("p", { className: "text-sm font-semibold text-cyan-300", children: "NEXUS TOP-UP" }) })] }), _jsxs("div", { className: "flex items-center gap-3", children: [_jsx("button", { className: "rounded-2xl border border-white/10 bg-white/5 p-2.5 text-slate-300 hover:bg-white/10", children: _jsx(FiSearch, { size: 18 }) }), _jsx("button", { className: "rounded-2xl border border-white/10 bg-white/5 p-2.5 text-slate-300 hover:bg-white/10", children: _jsx(FiBell, { size: 18 }) }), _jsx(Link, { to: "/profile", className: "rounded-2xl border border-cyan-400/30 bg-cyan-500/10 p-2.5 text-cyan-300 hover:bg-cyan-500/15", children: _jsx(FiUser, { size: 18 }) })] })] }) }));
-}

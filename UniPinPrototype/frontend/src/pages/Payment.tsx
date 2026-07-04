@@ -11,6 +11,8 @@ export const Payment = () => {
   const pkg = location.state?.pkg;
   
   const [selectedMethod, setSelectedMethod] = useState('cc');
+  const [isAbaProcessing, setIsAbaProcessing] = useState(false);
+  const processing = isProcessing || isAbaProcessing;
 
   useEffect(() => {
     if (!pkg) {
@@ -24,6 +26,43 @@ export const Payment = () => {
   if (!pkg) return null;
 
   const handlePay = async () => {
+    if (selectedMethod === 'aba') {
+      setIsAbaProcessing(true);
+      try {
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+        const response = await fetch(`${backendUrl}/in-game-topup/aba/checkout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount: pkg.price })
+        });
+        const data = await response.json();
+        if (data.success && data.formPayload) {
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = data.url;
+          
+          Object.keys(data.formPayload).forEach(key => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = data.formPayload[key];
+            form.appendChild(input);
+          });
+          
+          document.body.appendChild(form);
+          form.submit();
+        } else {
+          toast.error('Failed to initiate ABA checkout');
+          setIsAbaProcessing(false);
+        }
+      } catch (error) {
+        console.error(error);
+        toast.error('Error connecting to payment gateway');
+        setIsAbaProcessing(false);
+      }
+      return;
+    }
+
     const success = await processPayment(selectedMethod);
     if (success) {
       toast.success('Payment Successful!');
@@ -91,6 +130,23 @@ export const Payment = () => {
             
             <div className="space-y-3 md:space-y-4">
               
+              {/* ABA PayWay */}
+              <div 
+                onClick={() => setSelectedMethod('aba')}
+                className={`p-4 md:p-5 rounded-xl border flex items-center gap-4 cursor-pointer transition-all ${selectedMethod === 'aba' ? 'bg-[#1e293b] border-[#00f2fe] shadow-[0_0_15px_rgba(0,242,254,0.1)] scale-[1.01]' : 'bg-[#0f172a] border-slate-800 opacity-60 hover:opacity-100 hover:bg-[#1e293b]/50'}`}
+              >
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded bg-blue-500/20 flex items-center justify-center text-blue-500 font-black text-lg md:text-xl">
+                  ABA
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-bold text-white text-sm md:text-base">ABA PayWay</h4>
+                  <p className="text-[10px] md:text-xs text-slate-400 mt-0.5">ABA Mobile App or Cards</p>
+                </div>
+                <div className={`w-5 h-5 md:w-6 md:h-6 rounded-full border-2 flex items-center justify-center ${selectedMethod === 'aba' ? 'border-[#00f2fe]' : 'border-slate-600'}`}>
+                  {selectedMethod === 'aba' && <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#00f2fe]"></div>}
+                </div>
+              </div>
+              
               {/* Razer Gold */}
               <div 
                 onClick={() => setSelectedMethod('razer')}
@@ -148,10 +204,10 @@ export const Payment = () => {
             <div className="hidden md:block mt-8">
               <button 
                 onClick={handlePay}
-                disabled={isProcessing}
+                disabled={processing}
                 className="w-full bg-gradient-to-r from-[#00f2fe] to-[#8b5cf6] text-white font-bold py-4 rounded-xl shadow-[0_0_20px_rgba(139,92,246,0.4)] hover:shadow-[0_0_25px_rgba(0,242,254,0.6)] transition flex justify-center items-center gap-3 text-lg disabled:opacity-50 disabled:shadow-none"
               >
-                {isProcessing ? 'Processing...' : <><FiLock /> CONFIRM & PAY</>}
+                {processing ? 'Processing...' : <><FiLock /> CONFIRM & PAY</>}
               </button>
               <p className="text-center text-xs text-slate-500 mt-4 flex items-center justify-center gap-1">
                 <FiLock /> Secure 256-bit encryption
@@ -165,10 +221,10 @@ export const Payment = () => {
       <div className="md:hidden fixed bottom-0 w-full max-w-md bg-[#0f172a]/95 backdrop-blur-md border-t border-slate-800 p-4 z-50 rounded-t-2xl">
         <button 
           onClick={handlePay}
-          disabled={isProcessing}
+          disabled={processing}
           className="w-full bg-gradient-to-r from-[#00f2fe] to-[#8b5cf6] text-white font-bold py-3.5 rounded-xl shadow-[0_0_15px_rgba(139,92,246,0.4)] transition flex justify-center items-center gap-2 disabled:opacity-50 disabled:shadow-none"
         >
-          {isProcessing ? 'Processing...' : <><FiLock /> CONFIRM & PAY</>}
+          {processing ? 'Processing...' : <><FiLock /> CONFIRM & PAY</>}
         </button>
       </div>
 

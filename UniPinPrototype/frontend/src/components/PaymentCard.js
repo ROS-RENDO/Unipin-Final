@@ -1,5 +1,0 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { motion } from 'framer-motion';
-export default function PaymentCard({ method, onSelect, selected }) {
-    return (_jsxs(motion.button, { whileHover: { y: -2, scale: 1.01 }, onClick: () => onSelect(method.id), className: `flex items-center justify-between rounded-[20px] border px-4 py-4 text-left transition ${selected ? 'border-cyan-400/40 bg-cyan-500/10' : 'border-white/10 bg-slate-900/70 hover:border-cyan-400/30'}`, children: [_jsxs("div", { className: "flex items-center gap-3", children: [_jsx("div", { className: "flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-lg", children: method.icon }), _jsxs("div", { children: [_jsx("p", { className: "font-semibold text-white", children: method.name }), _jsx("p", { className: "text-sm text-slate-400", children: "Secure payment" })] })] }), _jsx("div", { className: `h-4 w-4 rounded-full border-2 ${selected ? 'border-cyan-300 bg-cyan-300' : 'border-slate-500'}` })] }));
-}

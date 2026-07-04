@@ -1,14 +1,36 @@
 import axios from 'axios'
 
-const client = axios.create({
-  baseURL: 'http://localhost:4000',
-  headers: { 'Content-Type': 'application/json' },
+const api = axios.create({
+  baseURL: 'https://dummy-api.example.com',
+  timeout: 2000,
 })
 
-export const validateUser = (payload) => client.post('/in-game-topup/user/validate', payload)
-export const createOrder = (payload) => client.post('/in-game-topup/order/create', payload)
-export const inquiryOrder = (payload) => client.post('/in-game-topup/order/inquiry', payload)
-export const fetchList = (payload) => client.post('/in-game-topup/list', payload)
-export const fetchDetail = (payload) => client.post('/in-game-topup/detail', payload)
+export const validatePlayer = async (game, userId) => {
+  await new Promise((resolve) => setTimeout(resolve, 900))
 
-export default client
+  if (!userId.trim()) {
+    throw new Error('Please enter a valid user ID')
+  }
+
+  return {
+    game,
+    userId,
+    profileName: 'NovaGamer',
+  }
+}
+
+export const createPayment = async ({ game, packageAmount, paymentMethod }) => {
+  await new Promise((resolve) => setTimeout(resolve, 1200))
+
+  if (!paymentMethod) {
+    throw new Error('Select a payment method to continue')
+  }
+
+  return {
+    success: true,
+    orderId: `ORD-${Math.floor(Math.random() * 9000) + 1000}`,
+    receipt: `Top-up ${packageAmount} diamonds for ${game}`,
+  }
+}
+
+export default api

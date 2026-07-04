@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import PropTypes from 'prop-types'
 
 export default function DiamondCard({ packageItem, selected, onSelect }) {
   return (
@@ -12,4 +13,13 @@ export default function DiamondCard({ packageItem, selected, onSelect }) {
       <p className="mt-2 text-sm text-slate-400">Instant delivery</p>
     </motion.button>
   )
+}
+
+DiamondCard.propTypes = {
+  packageItem: PropTypes.shape({
+    amount: PropTypes.number.isRequired,
+    price: PropTypes.number.isRequired,
+  }).isRequired,
+  selected: PropTypes.bool,
+  onSelect: PropTypes.func.isRequired,
 }

@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import PropTypes from 'prop-types'
 
 export default function Button({ children, className = '', variant = 'primary', ...props }) {
   const base = 'inline-flex items-center justify-center rounded-2xl px-4 py-3 font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-400/50'
@@ -13,4 +14,10 @@ export default function Button({ children, className = '', variant = 'primary', 
       {children}
     </motion.button>
   )
+}
+
+Button.propTypes = {
+  children: PropTypes.node.isRequired,
+  className: PropTypes.string,
+  variant: PropTypes.oneOf(['primary', 'secondary', 'ghost']),
 }

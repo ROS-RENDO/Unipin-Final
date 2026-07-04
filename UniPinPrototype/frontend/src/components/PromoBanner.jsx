@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { FiGift, FiPlay } from 'react-icons/fi'
 
 export default function PromoBanner() {
   return (
@@ -6,15 +7,16 @@ export default function PromoBanner() {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-xl">
           <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3 py-1 text-sm text-cyan-300">
-            FLASH SALE
+            <FiGift />
+            Limited weekend offer
           </div>
-          <h2 className="text-2xl font-semibold text-white sm:text-3xl">Mobile Legends</h2>
-          <p className="mt-2 text-sm text-slate-400 sm:text-base">Get 20% more Diamonds instantly</p>
+          <h2 className="text-2xl font-semibold text-white sm:text-3xl">Get 20% off your favorite game diamonds</h2>
+          <p className="mt-2 text-sm text-slate-400 sm:text-base">Fast delivery, secure checkout, and premium support for your next big match.</p>
         </div>
-        <div className="rounded-[24px] bg-white/5 px-5 py-4 text-sm text-slate-200 shadow-lg shadow-cyan-950/20">
-          <p className="font-semibold text-cyan-300">Featured Promos</p>
-          <p className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-400">Active now</p>
-        </div>
+        <button className="flex items-center justify-center gap-2 rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold text-white backdrop-blur-sm">
+          <FiPlay />
+          Watch promo
+        </button>
       </div>
     </motion.section>
   )

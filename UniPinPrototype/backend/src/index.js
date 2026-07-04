@@ -1,13 +1,33 @@
 import express from 'express'
 import cors from 'cors'
 import morgan from 'morgan'
+import crypto from 'crypto'
+import 'dotenv/config'
 import { db, saveDb } from './db.js'
 import { buildValidateRequest, buildOrderCreateRequest, buildInquiryRequest, buildListRequest, buildDetailRequest } from './models.js'
 
 const app = express()
-app.use(cors())
+
+// Enhanced CORS configuration
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}
+
+app.use(cors(corsOptions))
 app.use(express.json())
 app.use(morgan('dev'))
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err)
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || 'Internal server error'
+  })
+})
 
 const getUserByUserId = (userId) => db.prepare('SELECT * FROM users WHERE userId = ?').get(userId)
 const saveUser = (payload) => db.prepare('INSERT OR REPLACE INTO users (userId, serverId, username, validatedAt) VALUES (?, ?, ?, ?)').run(payload.userId, payload.serverId, payload.username, new Date().toISOString())
@@ -127,6 +147,62 @@ app.post('/in-game-topup/order/inquiry', (req, res) => {
   })
 })
 
-app.listen(4000, () => {
-  console.log('Backend running on http://localhost:4000')
+const ABA_MERCHANT_ID = process.env.ABA_MERCHANT_ID;
+const ABA_PUBLIC_KEY = process.env.ABA_PUBLIC_KEY;
+const ABA_API_URL = process.env.ABA_API_URL;
+
+const getReqTime = () => {
+  const now = new Date();
+  const pad = (n) => n.toString().padStart(2, '0');
+  return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+};
+
+const generateAbaHash = (reqTime, tranId, amount, itemsBase64, returnUrlBase64) => {
+  // Required string order for ABA: req_time + merchant_id + tran_id + amount + items + return_url
+  // Use BASE64 ENCODED values for hash calculation
+  const dataString = reqTime + ABA_MERCHANT_ID + tranId + amount + itemsBase64 + returnUrlBase64;
+  console.log('Hash input string:', dataString);
+  return crypto.createHmac('sha512', ABA_PUBLIC_KEY).update(dataString).digest('base64');
+};
+
+app.post('/in-game-topup/aba/checkout', (req, res) => {
+  const { amount } = req.body;
+  if (!amount) {
+    return res.status(400).json({ success: false, message: 'Missing amount' });
+  }
+
+  // ABA Payway requires amount to be exactly 2 decimal places (e.g. "5.00")
+  const formattedAmount = Number(amount).toFixed(2);
+
+  const req_time = getReqTime();
+  const tran_id = `TX-${Math.floor(Math.random() * 900000000) + 100000000}`;
+  
+  // Encode items and return_url to base64 FIRST
+  const itemsRaw = JSON.stringify([{ name: 'Game Topup', quantity: '1', price: formattedAmount }]);
+  const returnUrlRaw = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/history`;
+  
+  const items = Buffer.from(itemsRaw).toString('base64');
+  const return_url = Buffer.from(returnUrlRaw).toString('base64');
+  
+  // Calculate hash with BASE64 encoded values
+  const hash = generateAbaHash(req_time, tran_id, formattedAmount, items, return_url);
+
+  return res.json({
+    success: true,
+    url: ABA_API_URL,
+    formPayload: {
+      req_time,
+      merchant_id: ABA_MERCHANT_ID,
+      tran_id,
+      amount: formattedAmount,
+      items,
+      hash,
+      return_url
+    }
+  });
+});
+
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => {
+  console.log(`Backend running on http://localhost:${PORT}`)
 })

@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
+import PropTypes from 'prop-types'
 
-export default function PaymentCard({ method, onSelect, selected }) {
+export default function PaymentCard({ method, selected, onSelect }) {
   return (
     <motion.button
       whileHover={{ y: -2, scale: 1.01 }}
@@ -17,4 +18,14 @@ export default function PaymentCard({ method, onSelect, selected }) {
       <div className={`h-4 w-4 rounded-full border-2 ${selected ? 'border-cyan-300 bg-cyan-300' : 'border-slate-500'}`} />
     </motion.button>
   )
+}
+
+PaymentCard.propTypes = {
+  method: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    name: PropTypes.string.isRequired,
+    icon: PropTypes.string.isRequired,
+  }).isRequired,
+  selected: PropTypes.bool,
+  onSelect: PropTypes.func.isRequired,
 }
