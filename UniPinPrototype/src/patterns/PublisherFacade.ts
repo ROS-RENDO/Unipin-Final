@@ -9,56 +9,29 @@ export class PublisherFacade {
     /**
      * Validates a player ID and returns their Nickname from the game server.
      */
-    async validatePlayer(gameCode: string, playerId: string): Promise<string | null> {
-        console.log(`[Facade] Calling external Publisher API to validate player ${playerId} for ${gameCode}...`);
+    async validatePlayer(gameCode: string, playerId: string, zoneId?: string): Promise<string | null> {
+        console.log(`[Facade] Calling external Publisher API to validate player ${playerId} (Zone: ${zoneId}) for ${gameCode}...`);
         
-        try {
-            const response = await fetch(`/api/publisher/validate?gameCode=${gameCode}&playerId=${playerId}`);
-            if (!response.ok) {
-                console.error(`[Facade] ERROR: Publisher API returned ${response.status}`);
-                return null;
-            }
-            const json = await response.json();
-            if (json.success && json.data.username) {
-                console.log(`[Facade] Publisher API confirmed player is: ${json.data.username}`);
-                return json.data.username;
-            }
-            return null;
-        } catch (error) {
-            console.error(`[Facade] Network Error: Failed to validate player.`);
-            return null;
+        // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        // Mock successful validation for prototype
+        if (playerId.length >= 4) {
+            return `Player_${playerId}${zoneId ? `_Zone${zoneId}` : ''}`;
         }
+        
+        return null;
     }
 
     /**
      * Delivers the purchased currency to the player's account.
      */
-    async deliverCurrency(gameCode: string, playerId: string, amount: number): Promise<boolean> {
-        console.log(`[Facade] Calling external Publisher API to deliver ${amount} units to ${playerId}...`);
+    async deliverCurrency(gameCode: string, playerId: string, amount: number, zoneId?: string): Promise<boolean> {
+        console.log(`[Facade] Calling external Publisher API to deliver ${amount} units to ${playerId} (Zone: ${zoneId})...`);
         
-        try {
-            const response = await fetch('/api/publisher/deliver', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ gameCode, playerId, amount })
-            });
-
-            if (!response.ok) {
-                console.error(`[Facade] ERROR: Publisher API failed to deliver! (Status: ${response.status})`);
-                return false;
-            }
-            
-            const json = await response.json();
-            if (json.success) {
-                console.log(`[Facade] Publisher API confirmed delivery. Transaction ID: ${json.transactionId}`);
-                return true;
-            }
-            return false;
-        } catch (error) {
-            console.error(`[Facade] Network Error: Failed to deliver currency.`);
-            return false;
-        }
+        // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        return true; // Mock successful delivery
     }
 }
