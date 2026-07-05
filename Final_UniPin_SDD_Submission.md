@@ -288,6 +288,20 @@ classDiagram
     PublisherFacade ..> GamePublisherAPI : connects to
 ```
 
+**Class Relationships Explanation:**
+- **Association & Composition (`*--`, `-->`)**:
+  - `GameCatalog` has a composition relationship (`*--`) with `Package`, meaning the catalog owns and manages the lifecycle of the packages.
+  - `GuestUser` associates with (`-->`) `GameCatalog` to browse games.
+  - `TopUpOrder` has associations with `OrderState` and `PaymentProcessor`, delegating specific behaviors (state management and payment handling) to these respective classes.
+  - `PaymentProcessor` associates with a specific `PaymentStrategy` chosen by the user at runtime.
+- **Dependency (`..>`)**:
+  - `OrderBuilder` has a dependency on `TopUpOrder` since its primary purpose is to construct and return instances of it.
+  - `TopUpOrder` depends on `PublisherFacade` to execute external operations like player validation and currency delivery.
+  - `PublisherFacade` depends on the `GamePublisherAPI` interface to route requests to external publishers.
+- **Realization/Inheritance (`<|..`)**:
+  - `PendingState`, `CompletedState`, and `FailedState` implement the `OrderState` interface.
+  - `CreditCardStrategy`, `EWalletStrategy`, and `BankTransferStrategy` implement the `PaymentStrategy` interface, enforcing a contract for payment processing.
+
 ### Sequence Diagram
 
 **Flow:**
