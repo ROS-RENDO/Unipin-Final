@@ -7,10 +7,11 @@ import toast from 'react-hot-toast';
 export const Payment = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { playerId, checkout, processPayment, isProcessing } = useTopUp();
+  const { playerId, checkout, processPayment, isProcessing, currentOrder } = useTopUp();
   const pkg = location.state?.pkg;
   
   const [selectedMethod, setSelectedMethod] = useState('cc');
+  const [promoInput, setPromoInput] = useState('');
   const [isAbaProcessing, setIsAbaProcessing] = useState(false);
   const [abaQr, setAbaQr] = useState<{ qrImage: string; deeplink: string; tranId: string } | null>(null);
   const processing = isProcessing || isAbaProcessing;
@@ -34,7 +35,7 @@ export const Payment = () => {
         const response = await fetch(`${backendUrl}/in-game-topup/aba/checkout`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: pkg.price })
+          body: JSON.stringify({ amount: currentOrder?.getFinalPrice() || pkg.price })
         });
         const data = await response.json();
         if (data.success && data.qrImage) {
@@ -69,7 +70,7 @@ export const Payment = () => {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-[#1e293b] rounded-2xl border border-slate-700 p-6 max-w-sm w-full text-center shadow-2xl">
             <h3 className="text-lg font-bold text-white mb-1">Scan with ABA Mobile</h3>
-            <p className="text-2xl font-black text-[#00f2fe] my-2">${pkg.price}</p>
+            <p className="text-2xl font-black text-[#00f2fe] my-2">${currentOrder?.getFinalPrice() || pkg.price}</p>
             <p className="text-xs text-slate-400 mb-4">Ref: <span className="font-mono text-[#00f2fe]">{abaQr.tranId}</span></p>
             <div className="bg-white rounded-xl p-3 inline-block mb-4">
               <img src={abaQr.qrImage} alt="ABA PayWay QR" className="w-48 h-48 object-contain" />
@@ -132,7 +133,34 @@ export const Payment = () => {
               </div>
               <div className="text-right">
                 <p className="text-[10px] md:text-xs text-slate-400 font-bold tracking-widest uppercase mb-1">Total</p>
-                <h2 className="text-2xl md:text-3xl font-black text-[#00f2fe]">${pkg.price}</h2>
+                {currentOrder && currentOrder.getFinalPrice() < pkg.price ? (
+                  <>
+                    <h2 className="text-sm md:text-base font-medium text-slate-500 line-through">${pkg.price}</h2>
+                    <h2 className="text-2xl md:text-3xl font-black text-[#00f2fe]">${currentOrder.getFinalPrice()}</h2>
+                  </>
+                ) : (
+                  <h2 className="text-2xl md:text-3xl font-black text-[#00f2fe]">${pkg.price}</h2>
+                )}
+              </div>
+            </div>
+            
+            {/* Promo Code Input */}
+            <div className="mt-4 pt-4 border-t border-slate-800/50">
+              <p className="text-xs text-slate-400 mb-2">Have a promo code? (Try WELCOME20)</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Enter code"
+                  value={promoInput}
+                  onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                  className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#8b5cf6]"
+                />
+                <button
+                  onClick={() => checkout(selectedMethod, pkg.price, promoInput)}
+                  className="bg-[#8b5cf6] hover:bg-[#7c3aed] text-white px-4 py-2 rounded-lg text-sm font-bold transition"
+                >
+                  Apply
+                </button>
               </div>
             </div>
             

@@ -24,9 +24,10 @@ interface TopUpContextType {
   validatedName: string;
   orderStatus: string;
   currentOrder: TopUpOrder | null;
+  orderHistory: TopUpOrder[];
   isProcessing: boolean;
   validateId: () => Promise<boolean>;
-  checkout: (paymentMethod: string, amount: number) => void;
+  checkout: (paymentMethod: string, amount: number, promoCode?: string) => void;
   processPayment: (paymentMethod: string) => Promise<boolean>;
 }
 
@@ -38,6 +39,7 @@ export const TopUpProvider = ({ children }: { children: ReactNode }) => {
   const [validatedName, setValidatedName] = useState('');
   const [orderStatus, setOrderStatus] = useState('');
   const [currentOrder, setCurrentOrder] = useState<TopUpOrder | null>(null);
+  const [orderHistory, setOrderHistory] = useState<TopUpOrder[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const validateId = async () => {
@@ -52,14 +54,14 @@ export const TopUpProvider = ({ children }: { children: ReactNode }) => {
     return false;
   };
 
-  const checkout = (paymentMethod: string, amount: number) => {
+  const checkout = (paymentMethod: string, amount: number, promoCode?: string) => {
     const engine = new NotificationEngine();
     engine.attach(new EmailReceiptNotifier());
     engine.attach(new WebhookNotifier());
     engine.attach(new ContextNotifier(setOrderStatus));
     
-    // Create standard order
-    const order = OrderFactory.createOrder("Standard", amount, "MLBB", playerId, engine);
+    const orderType = promoCode ? "Promo" : "Standard";
+    const order = OrderFactory.createOrder(orderType, amount, "MLBB", playerId, engine, promoCode);
     setCurrentOrder(order);
   };
 
@@ -83,8 +85,10 @@ export const TopUpProvider = ({ children }: { children: ReactNode }) => {
       const facade = new PublisherFacade();
       const deliverySuccess = await facade.deliverCurrency(currentOrder.gameCode, currentOrder.playerId, currentOrder.baseAmount);
       currentOrder.deliver(deliverySuccess);
+      setOrderHistory(prev => [currentOrder, ...prev]);
     } else {
       currentOrder.deliver(false);
+      setOrderHistory(prev => [currentOrder, ...prev]);
     }
     
     setIsProcessing(false);
@@ -94,7 +98,7 @@ export const TopUpProvider = ({ children }: { children: ReactNode }) => {
   return (
     <TopUpContext.Provider value={{
       playerId, setPlayerId, zoneId, setZoneId, validatedName, orderStatus,
-      currentOrder, isProcessing, validateId, checkout, processPayment
+      currentOrder, orderHistory, isProcessing, validateId, checkout, processPayment
     }}>
       {children}
     </TopUpContext.Provider>

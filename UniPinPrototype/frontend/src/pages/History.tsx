@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { FiChevronDown, FiCopy, FiCheckCircle, FiClock, FiXCircle } from 'react-icons/fi';
 import { games } from '../data/games';
 import { motion } from 'framer-motion';
+import { useTopUp } from '../context/TopUpContext';
 
 const TRANSACTIONS = [
   { id: 'TXN-847291', gameId: 'genshin', item: 'Blessing of the Welkin Moon', date: '24 Oct 2023', time: '14:30 PM', priceUsd: 4.99, priceKhr: 19960, method: 'ABA Pay', status: 'Completed' },
@@ -12,10 +13,30 @@ const TRANSACTIONS = [
 ];
 
 export const History = () => {
+  const { orderHistory } = useTopUp();
   const [tab, setTab] = useState('All');
   const [copiedTx, setCopiedTx] = useState<string | null>(null);
 
-  const filtered = tab === 'All' ? TRANSACTIONS : TRANSACTIONS.filter(t => t.status === tab);
+  const mapStatus = (stateStr: string) => {
+    if (stateStr.includes('Completed')) return 'Completed';
+    if (stateStr.includes('Failed')) return 'Failed';
+    return 'Pending'; // Created or Processing Delivery
+  };
+
+  const liveTransactions = orderHistory.map(o => ({
+    id: o.orderId,
+    gameId: 'mlbb', // Our demo currently defaults to MLBB
+    item: 'Diamonds',
+    date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+    time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    priceUsd: o.getFinalPrice(),
+    priceKhr: o.getFinalPrice() * 4000,
+    method: 'Credit Card / ABA',
+    status: mapStatus(o.state.getStatusString())
+  }));
+
+  const allTransactions = [...liveTransactions, ...TRANSACTIONS];
+  const filtered = tab === 'All' ? allTransactions : allTransactions.filter(t => t.status === tab);
 
   const handleCopy = (id: string) => {
     navigator.clipboard.writeText(id);
