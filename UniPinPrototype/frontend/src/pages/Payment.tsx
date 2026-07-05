@@ -143,7 +143,7 @@ export const Payment = () => {
                   <span className="text-[#00f2fe]"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" /></svg></span>
                   Item
                 </span>
-                <span className="font-medium text-white">{pkg.diamonds} Diamonds</span>
+                <span className="font-medium text-white">{pkg.amount} Diamonds</span>
               </div>
               <div className="flex justify-between items-center text-sm md:text-base text-slate-300">
                 <span className="flex items-center gap-2">
@@ -152,12 +152,12 @@ export const Payment = () => {
                 </span>
                 <span className="font-mono text-white">{playerId}</span>
               </div>
-              {game?.discountRate > 0 && (
+              {pkg.originalPrice > pkg.price && (
                 <div className="flex justify-between items-center text-sm md:text-base text-emerald-400 mt-2">
                   <span className="flex items-center gap-2">
-                    <span>🎉</span> Promotion Applied
+                    <span>🎉</span> Package Discount Applied
                   </span>
-                  <span className="font-bold">-{game.discountRate * 100}%</span>
+                  <span className="font-bold">-${(pkg.originalPrice - pkg.price).toFixed(2)}</span>
                 </div>
               )}
             </div>

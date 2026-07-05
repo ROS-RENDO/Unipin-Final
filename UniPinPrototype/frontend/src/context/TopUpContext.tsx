@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import { PublisherFacade } from '../patterns/PublisherFacade';
-import { OrderFactory, TopUpOrder } from '../patterns/OrderFactory';
+import { OrderBuilder, TopUpOrder } from '../patterns/OrderBuilder';
 import { PaymentProcessor, CreditCardStrategy, EWalletStrategy, BankTransferStrategy } from '../patterns/PaymentStrategy';
 
 interface TopUpContextType {
@@ -14,7 +14,7 @@ interface TopUpContextType {
   orderHistory: TopUpOrder[];
   isProcessing: boolean;
   validateId: () => Promise<boolean>;
-  checkout: (_paymentMethod: string, amount: number, game: any) => void;
+  checkout: (_paymentMethod: string, pkg: any, game: any) => void;
   processPayment: (paymentMethod: string) => Promise<boolean>;
 }
 
@@ -41,12 +41,14 @@ export const TopUpProvider = ({ children }: { children: ReactNode }) => {
     return false;
   };
 
-  const checkout = (_paymentMethod: string, amount: number, game: any) => {
-    const hasPromo = game && game.discountRate && game.discountRate > 0;
-    const orderType = hasPromo ? "Promo" : "Standard";
-    
+  const checkout = (_paymentMethod: string, pkg: any, game: any) => {
     const gameCode = game ? game.id : "Unknown";
-    const order = OrderFactory.createOrder(orderType, amount, gameCode, playerId, game?.discountRate);
+    const order = new OrderBuilder()
+        .setGameCode(gameCode)
+        .setPlayer(playerId, zoneId)
+        .setPackage(pkg.id || "pkg", pkg.amount || pkg.diamonds || 0, pkg.price)
+        .build();
+        
     setCurrentOrder(order);
     setOrderStatus(order.state.getStatusString());
   };

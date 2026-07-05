@@ -1,29 +1,24 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { FiArrowLeft, FiBell } from 'react-icons/fi';
 import { useTopUp } from '../context/TopUpContext';
-import { useState } from 'react';
-
-const PACKAGES = [
-  { id: '1', diamonds: 50, price: 1.00, bonus: 0 },
-  { id: '2', diamonds: 250, price: 5.00, bonus: 25 },
-  { id: '3', diamonds: 500, price: 10.00, bonus: 65 },
-  { id: '4', diamonds: 1000, price: 20.00, bonus: 150 },
-  { id: '5', diamonds: 2500, price: 50.00, bonus: 450 },
-  { id: '6', diamonds: 5000, price: 100.00, bonus: 1000 },
-  { id: '7', diamonds: 10000, price: 200.00, bonus: 2500 },
-  { id: '8', diamonds: 25000, price: 500.00, bonus: 7500 },
-];
-
-import { games } from '../data/games';
+import { useState, useEffect } from 'react';
+import { GameCatalog } from '../patterns/GameCatalog';
 
 export const TopUp = () => {
   const navigate = useNavigate();
   const { gameId } = useParams();
   const { playerId, setPlayerId, zoneId, setZoneId, validateId, validatedName } = useTopUp();
-  const [selectedPkg, setSelectedPkg] = useState(PACKAGES[1]);
+  const [selectedPkg, setSelectedPkg] = useState<any>(null);
   const [isValidating, setIsValidating] = useState(false);
 
-  const game = games.find(g => g.id === gameId) || games[0];
+  const catalog = GameCatalog.getInstance();
+  const game = catalog.getGameById(gameId || '') || catalog.getAllGames()[0];
+  
+  useEffect(() => {
+    if (game && game.packages && game.packages.length > 0) {
+      setSelectedPkg(game.packages[0]);
+    }
+  }, [game]);
 
   const handleValidate = async () => {
     setIsValidating(true);
@@ -32,7 +27,7 @@ export const TopUp = () => {
   };
 
   const handleContinue = () => {
-    if (!validatedName || validatedName.includes("Invalid")) return;
+    if (!validatedName || validatedName.includes("Invalid") || !selectedPkg) return;
     navigate('/payment', { state: { pkg: selectedPkg, game } });
   };
 
@@ -137,23 +132,31 @@ export const TopUp = () => {
             </div>
             
             <div className="grid grid-cols-2 gap-3 md:gap-4">
-              {PACKAGES.map((pkg) => (
+              {game.packages && game.packages.map((pkg: any) => (
                 <div 
                   key={pkg.id}
                   onClick={() => setSelectedPkg(pkg)}
-                  className={`relative p-3 md:p-4 rounded-xl border flex flex-col items-center justify-center cursor-pointer transition-all ${selectedPkg.id === pkg.id ? 'bg-[#1e293b] border-[#00f2fe] shadow-[0_0_15px_rgba(0,242,254,0.15)] scale-[1.02]' : 'bg-[#1e293b]/50 border-slate-800 hover:border-slate-600 hover:bg-[#1e293b]/80'}`}
+                  className={`relative p-3 md:p-4 rounded-xl border flex flex-col items-center justify-center cursor-pointer transition-all ${selectedPkg?.id === pkg.id ? 'bg-[#1e293b] border-[#00f2fe] shadow-[0_0_15px_rgba(0,242,254,0.15)] scale-[1.02]' : 'bg-[#1e293b]/50 border-slate-800 hover:border-slate-600 hover:bg-[#1e293b]/80'}`}
                 >
                   {pkg.popular && (
                     <span className="absolute -top-2 bg-[#8b5cf6] text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Most Popular</span>
                   )}
-                  {selectedPkg.id === pkg.id && (
+                  {pkg.originalPrice > pkg.price && (
+                    <span className="absolute -top-2 right-2 bg-emerald-500 text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">Discounted</span>
+                  )}
+                  {selectedPkg?.id === pkg.id && (
                     <div className="absolute top-2 right-2 text-[#00f2fe]">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     </div>
                   )}
                   <div className="text-[#00f2fe] mb-1"><svg width="24" md:width="28" height="24" md:height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
-                  <div className="font-bold text-white text-sm md:text-base">{pkg.diamonds} Diamonds</div>
-                  <div className="text-[#00f2fe] font-medium text-xs md:text-sm mt-0.5">${pkg.price}</div>
+                  <div className="font-bold text-white text-sm md:text-base">{pkg.amount} Diamonds</div>
+                  <div className="font-medium text-xs md:text-sm mt-0.5 flex gap-2 items-center">
+                    {pkg.originalPrice > pkg.price && (
+                        <span className="text-slate-500 line-through text-[10px]">${pkg.originalPrice.toFixed(2)}</span>
+                    )}
+                    <span className="text-[#00f2fe]">${pkg.price.toFixed(2)}</span>
+                  </div>
                 </div>
               ))}
             </div>
