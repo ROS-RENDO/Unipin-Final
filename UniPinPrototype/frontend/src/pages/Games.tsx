@@ -61,21 +61,21 @@ export const Games = () => {
         {filteredGames.length > 0 ? (
           filteredGames.map((game) => (
             <Link to={`/topup/${game.id}`} key={game.id} className="group">
-              <div className="rounded-xl bg-slate-900 border border-slate-800 overflow-hidden relative aspect-square transition-all duration-300 hover:border-[#8b5cf6] hover:shadow-[0_0_20px_rgba(139,92,246,0.2)] hover:-translate-y-1">
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/30 to-transparent z-10"></div>
+              <div className="rounded-[16px] bg-[#0f172a] border border-slate-700/50 overflow-hidden relative aspect-[4/5] transition-all duration-300 hover:border-[#8b5cf6] hover:shadow-[0_0_20px_rgba(139,92,246,0.2)] hover:-translate-y-1">
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a] via-[#0f172a]/50 to-transparent z-10"></div>
                 <img src={game.image} alt={game.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
                 
                 {game.discount && (
                   <div className="absolute top-3 left-3 z-20">
-                    <span className="bg-[#00f2fe] text-slate-900 text-[9px] font-bold px-2 py-0.5 rounded shadow-lg">
+                    <span className="bg-[#00f2fe] text-slate-900 text-[10px] font-bold px-2 py-1 rounded shadow-lg">
                       {game.discount}
                     </span>
                   </div>
                 )}
                 
-                <div className="absolute bottom-3 left-3 right-3 z-20">
-                  <h3 className="text-white font-bold text-sm line-clamp-1">{game.name}</h3>
-                  <p className="text-slate-400 text-[10px]">{game.publisher}</p>
+                <div className="absolute bottom-4 left-4 right-4 z-20">
+                  <h3 className="text-white font-bold text-base line-clamp-1">{game.name}</h3>
+                  <p className="text-slate-300 text-xs mt-0.5">{game.publisher}</p>
                 </div>
               </div>
             </Link>
