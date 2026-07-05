@@ -33,7 +33,7 @@ export const TopUp = () => {
 
   const handleContinue = () => {
     if (!validatedName || validatedName.includes("Invalid")) return;
-    navigate('/payment', { state: { pkg: selectedPkg } });
+    navigate('/payment', { state: { pkg: selectedPkg, game } });
   };
 
   return (

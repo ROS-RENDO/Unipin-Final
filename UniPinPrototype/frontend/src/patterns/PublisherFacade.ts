@@ -27,7 +27,7 @@ export class PublisherFacade {
      * Delivers the purchased currency to the player's account.
      */
     async deliverCurrency(gameCode: string, playerId: string, amount: number, zoneId?: string): Promise<boolean> {
-        console.log(`[Facade] Calling external Publisher API to deliver ${amount} units to ${playerId} (Zone: ${zoneId})...`);
+        console.log(`[Facade] Calling external Publisher API to deliver ${amount} units to ${playerId} (Zone: ${zoneId}) for ${gameCode}...`);
         
         // Simulate network delay
         await new Promise(resolve => setTimeout(resolve, 1000));

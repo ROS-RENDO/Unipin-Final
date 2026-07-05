@@ -1,20 +1,7 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import { PublisherFacade } from '../patterns/PublisherFacade';
 import { OrderFactory, TopUpOrder } from '../patterns/OrderFactory';
 import { PaymentProcessor, CreditCardStrategy, EWalletStrategy, BankTransferStrategy } from '../patterns/PaymentStrategy';
-import { NotificationEngine, EmailReceiptNotifier, WebhookNotifier } from '../patterns/NotificationObserver';
-import type { OrderObserver } from '../patterns/NotificationObserver';
-
-// Context Notifier to bridge the Observer pattern with React State
-class ContextNotifier implements OrderObserver {
-  private setStatus: (status: string) => void;
-  constructor(setStatus: (status: string) => void) {
-    this.setStatus = setStatus;
-  }
-  update(_orderId: string, eventDetails: string): void {
-    this.setStatus(eventDetails);
-  }
-}
 
 interface TopUpContextType {
   playerId: string;
@@ -27,7 +14,7 @@ interface TopUpContextType {
   orderHistory: TopUpOrder[];
   isProcessing: boolean;
   validateId: () => Promise<boolean>;
-  checkout: (paymentMethod: string, amount: number, promoCode?: string) => void;
+  checkout: (_paymentMethod: string, amount: number, game: any) => void;
   processPayment: (paymentMethod: string) => Promise<boolean>;
 }
 
@@ -54,15 +41,14 @@ export const TopUpProvider = ({ children }: { children: ReactNode }) => {
     return false;
   };
 
-  const checkout = (paymentMethod: string, amount: number, promoCode?: string) => {
-    const engine = new NotificationEngine();
-    engine.attach(new EmailReceiptNotifier());
-    engine.attach(new WebhookNotifier());
-    engine.attach(new ContextNotifier(setOrderStatus));
+  const checkout = (_paymentMethod: string, amount: number, game: any) => {
+    const hasPromo = game && game.discountRate && game.discountRate > 0;
+    const orderType = hasPromo ? "Promo" : "Standard";
     
-    const orderType = promoCode ? "Promo" : "Standard";
-    const order = OrderFactory.createOrder(orderType, amount, "MLBB", playerId, engine, promoCode);
+    const gameCode = game ? game.id : "Unknown";
+    const order = OrderFactory.createOrder(orderType, amount, gameCode, playerId, game?.discountRate);
     setCurrentOrder(order);
+    setOrderStatus(order.state.getStatusString());
   };
 
   const processPayment = async (paymentMethod: string) => {
@@ -78,6 +64,7 @@ export const TopUpProvider = ({ children }: { children: ReactNode }) => {
     
     const price = currentOrder.getFinalPrice();
     currentOrder.pay();
+    setOrderStatus(currentOrder.state.getStatusString());
     
     const paymentSuccess = await processor.processPayment(price);
     
@@ -85,9 +72,11 @@ export const TopUpProvider = ({ children }: { children: ReactNode }) => {
       const facade = new PublisherFacade();
       const deliverySuccess = await facade.deliverCurrency(currentOrder.gameCode, currentOrder.playerId, currentOrder.baseAmount);
       currentOrder.deliver(deliverySuccess);
+      setOrderStatus(currentOrder.state.getStatusString());
       setOrderHistory(prev => [currentOrder, ...prev]);
     } else {
       currentOrder.deliver(false);
+      setOrderStatus(currentOrder.state.getStatusString());
       setOrderHistory(prev => [currentOrder, ...prev]);
     }
     

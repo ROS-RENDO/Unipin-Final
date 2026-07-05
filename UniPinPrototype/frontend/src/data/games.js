@@ -8,6 +8,7 @@ export const games = [
     accent: 'from-cyan-500 to-blue-600',
     category: 'MOBA',
     discount: '10% OFF',
+    discountRate: 0.10,
     price: 12,
   },
   {
@@ -19,6 +20,7 @@ export const games = [
     accent: 'from-fuchsia-500 to-purple-600',
     category: 'Shooter',
     discount: '20% OFF',
+    discountRate: 0.20,
     price: 15,
   },
   {
@@ -30,6 +32,7 @@ export const games = [
     accent: 'from-violet-500 to-indigo-600',
     category: 'RPG',
     discount: '15% OFF',
+    discountRate: 0.15,
     price: 18,
   },
   {
@@ -41,6 +44,7 @@ export const games = [
     accent: 'from-cyan-400 to-sky-600',
     category: 'Shooter',
     discount: '',
+    discountRate: 0,
     price: 16,
   },
   {
@@ -52,6 +56,7 @@ export const games = [
     accent: 'from-amber-500 to-orange-600',
     category: 'Shooter',
     discount: '5% OFF',
+    discountRate: 0.05,
     price: 10,
   },
   {
@@ -63,6 +68,7 @@ export const games = [
     accent: 'from-purple-500 to-pink-600',
     category: 'RPG',
     discount: 'First Top-Up',
+    discountRate: 0.50,
     price: 15,
   },
   {
@@ -74,6 +80,7 @@ export const games = [
     accent: 'from-yellow-400 to-amber-600',
     category: 'Strategy',
     discount: '',
+    discountRate: 0,
     price: 5,
   },
   {
@@ -85,6 +92,7 @@ export const games = [
     accent: 'from-gray-500 to-gray-700',
     category: 'Sandbox',
     discount: '',
+    discountRate: 0,
     price: 10,
   }
 ];

@@ -9,6 +9,7 @@ export const Payment = () => {
   const navigate = useNavigate();
   const { playerId, checkout, processPayment, isProcessing } = useTopUp();
   const pkg = location.state?.pkg;
+  const game = location.state?.game;
 
   const [selectedMethod, setSelectedMethod] = useState('cc');
   const [isAbaProcessing, setIsAbaProcessing] = useState(false);
@@ -20,9 +21,9 @@ export const Payment = () => {
       navigate('/');
     } else {
       // Initialize order in backend context
-      checkout('cc', pkg.price);
+      checkout('cc', pkg.price, game);
     }
-  }, [pkg, navigate, checkout]);
+  }, [pkg, game, navigate, checkout]);
 
   if (!pkg) return null;
 
@@ -128,7 +129,7 @@ export const Payment = () => {
             <div className="flex justify-between items-start mb-4">
               <div>
                 <p className="text-[10px] md:text-xs text-slate-400 font-bold tracking-widest uppercase mb-1">Order Summary</p>
-                <h2 className="text-xl md:text-2xl font-bold text-white">Mobile Legends</h2>
+                <h2 className="text-xl md:text-2xl font-bold text-white">{game?.name || 'Top-Up'}</h2>
               </div>
               <div className="text-right">
                 <p className="text-[10px] md:text-xs text-slate-400 font-bold tracking-widest uppercase mb-1">Total</p>
@@ -151,6 +152,14 @@ export const Payment = () => {
                 </span>
                 <span className="font-mono text-white">{playerId}</span>
               </div>
+              {game?.discountRate > 0 && (
+                <div className="flex justify-between items-center text-sm md:text-base text-emerald-400 mt-2">
+                  <span className="flex items-center gap-2">
+                    <span>🎉</span> Promotion Applied
+                  </span>
+                  <span className="font-bold">-{game.discountRate * 100}%</span>
+                </div>
+              )}
             </div>
           </div>
 

@@ -173,7 +173,6 @@ classDiagram
 
     class TopUpOrder {
         <<abstract>>
-        -List~OrderObserver~ observers
         +String orderId
         +String playerId
         +String zoneId
@@ -225,13 +224,7 @@ classDiagram
         +deliver(order TopUpOrder, success bool) void
     }
 
-    class CreatedState {
-        +getStatusString() String
-        +pay(order TopUpOrder) void
-        +deliver(order TopUpOrder, success bool) void
-    }
-
-    class ProcessingDeliveryState {
+    class PendingState {
         +getStatusString() String
         +pay(order TopUpOrder) void
         +deliver(order TopUpOrder, success bool) void
@@ -249,8 +242,7 @@ classDiagram
         +deliver(order TopUpOrder, success bool) void
     }
 
-    OrderState <|.. CreatedState
-    OrderState <|.. ProcessingDeliveryState
+    OrderState <|.. PendingState
     OrderState <|.. CompletedState
     OrderState <|.. FailedState
     TopUpOrder "1" --> "1" OrderState
@@ -298,32 +290,6 @@ classDiagram
     PaymentProcessor ..> PaymentGateway : pay/refund
     TopUpOrder "1" --> "1" PaymentProcessor : has
 
-    %% ── OBSERVER PATTERN ────────────────────────────
-    class OrderSubject {
-        <<interface>>
-        +attach(observer OrderObserver) void
-        +detach(observer OrderObserver) void
-        +notifyObservers() void
-    }
-    
-    class OrderObserver {
-        <<interface>>
-        +update(order TopUpOrder) void
-    }
-    
-    class EmailNotificationService {
-        +update(order TopUpOrder) void
-    }
-    
-    class LoyaltyPointService {
-        +update(order TopUpOrder) void
-    }
-
-    OrderSubject <|.. TopUpOrder
-    OrderObserver <|.. EmailNotificationService
-    OrderObserver <|.. LoyaltyPointService
-    TopUpOrder o--> "0..*" OrderObserver : notifies
-
     %% ── DELIVERY — Adapter & Facade Pattern ─────────
     class PublisherFacade {
         +validatePlayer(gameCode, PlayerId, zoneId) void
@@ -360,9 +326,16 @@ classDiagram
         +addDiamonds(txId, accId, serverId, count)
     }
 
+    class TencentRestAPI {
+        <<Third-Party>>
+        +validateSession(openId)
+        +grantGameCurrency(orderId, openId, amount)
+    }
+
     GamePublisherAPI <|.. MoontonAdapter
     GamePublisherAPI <|.. TencentAdapter
     MoontonAdapter --> MoontonLegacySystem : adapts
+    TencentAdapter --> TencentRestAPI : adapts
 
     TopUpOrder ..> PublisherFacade : validate/deliver
     PublisherFacade ..> GamePublisherAPI : routes to specific adapter
@@ -403,7 +376,7 @@ sequenceDiagram
 ```
 
 #### Sequence 2: Apply Promotion & Checkout
-*A Customer applies a promo code. The system creates a `PromoOrder` which calculates a discounted final price.*
+*A Customer selects a Game that has an active promotion. The system automatically creates a `PromoOrder` which calculates a discounted final price.*
 ```mermaid
 sequenceDiagram
     autonumber
@@ -413,9 +386,9 @@ sequenceDiagram
     participant Order as PromoOrder
     participant PayGateway as Payment Gateway
 
-    Customer->>Portal: Enter Promo Code "WELCOME20"
-    Portal->>OrderFac: createOrder("Promo", code="WELCOME20")
-    OrderFac-->>Portal: PromoOrder (State: Created)
+    Customer->>Portal: Checkout Game (With active promo)
+    Portal->>OrderFac: createOrder("Promo", discountRate=0.20)
+    OrderFac-->>Portal: PromoOrder (State: Pending)
     
     Portal->>Order: getFinalPrice()
     Order-->>Portal: Returns Discounted Amount (-20%)
@@ -527,16 +500,15 @@ stateDiagram-v2
 
 ## 5. Design Pattern Application
 
-We have applied 6 design patterns to solve specific architectural problems in the UniPin System.
+We have applied 5 design patterns to solve specific architectural problems in the UniPin System.
 
 | Pattern | Category | Problem Solved | Location in Class Diagram | Why Chosen |
 | :--- | :--- | :--- | :--- | :--- |
 | **1. Facade Pattern** | Structural | UniPin connects to dozens of different Game Publishers (Moonton, Tencent), all with entirely different APIs. The core system shouldn't know these details. | `PublisherFacade` class. It shields the `TopUpOrder` from the complexity of external APIs. | Chosen over direct API calls in the Order class to ensure loose coupling. When a new game is added, we only update the Facade. |
 | **2. Adapter Pattern** | Structural | Third-party game publishers (e.g., Moonton, Tencent) have incompatible, proprietary APIs. We need a unified way to communicate with them. | `MoontonAdapter`, `TencentAdapter` implementing `GamePublisherAPI`. | Chosen to map our internal `GamePublisherAPI` interface to the incompatible methods of `MoontonLegacySystem`. It isolates data translation logic. |
 | **3. Strategy Pattern** | Behavioral | Top-ups can be paid for via Credit Cards, E-Wallets, or Bank Transfers. Writing `if/else` for every payment method makes checkout rigid. | `PaymentProcessor` uses the `PaymentStrategy` interface. | Chosen over inheritance because payment methods are interchangeable behaviors at runtime. It perfectly adheres to the Open/Closed Principle. |
-| **4. State Pattern** | Behavioral | Orders have a strict lifecycle. State transitions require complex validation (e.g., you cannot refund an order that is still in `Created` state). | `OrderState` interface and concrete state classes. | Chosen over massive switch statements inside the `TopUpOrder` class. Each state handles its own transition logic securely. |
-| **5. Observer Pattern** | Behavioral | When an order succeeds or fails, multiple independent subsystems (Email service, Loyalty points) need to react instantly. | `OrderSubject` interface, `TopUpOrder` (Concrete Subject), and `OrderObserver` interface. | Chosen because it allows UniPin to add new notification methods without modifying the core `TopUpOrder` transactional logic. |
-| **6. Factory Method** | Creational | We have distinct types of checkout flows: Standard purchases and Promotional purchases which require different price calculations. | `OrderFactory` class with `createOrder()` which produces a `TopUpOrder` subclass. | Chosen to centralize the complex creation logic and cleanly separate standard pricing from promotional pricing. |
+| **4. State Pattern** | Behavioral | Orders have a strict lifecycle. State transitions require complex validation. | `OrderState` interface and concrete state classes. | Chosen over massive switch statements inside the `TopUpOrder` class. Each state handles its own transition logic securely. |
+| **5. Factory Method** | Creational | We have distinct types of checkout flows: Standard purchases and Promotional purchases which require different price calculations. | `OrderFactory` class with `createOrder()` which produces a `TopUpOrder` subclass. | Chosen to centralize the complex creation logic and cleanly separate standard pricing from promotional pricing. |
 
 ---
 
