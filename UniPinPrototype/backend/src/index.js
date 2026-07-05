@@ -5,6 +5,12 @@ import crypto from 'crypto'
 import 'dotenv/config'
 import { db, saveDb } from './db.js'
 import { buildValidateRequest, buildOrderCreateRequest, buildInquiryRequest, buildListRequest, buildDetailRequest } from './models.js'
+import { OrderFactory } from './patterns/factory/OrderFactory.js';
+import { OrderType } from './enums.js';
+import { PaymentProcessor } from './domain/PaymentProcessor.js';
+import { CreditCardStrategy, BankTransferStrategy } from './patterns/strategy/paymentStrategies.js';
+import { PublisherFacade } from './patterns/facade/PublisherFacade.js';
+import { GamePublisherAPI } from './domain/GamePublisherAPI.js';
 
 const app = express()
 
@@ -91,20 +97,30 @@ app.post('/in-game-topup/detail', (req, res) => {
   })
 })
 
-app.post('/in-game-topup/order/create', (req, res) => {
+app.post('/in-game-topup/order/create', async (req, res) => {
   const { flowId, userId, serverId, username, SupplierCheckoutRequest } = req.body
   if (!flowId || !userId || !serverId || !username || !SupplierCheckoutRequest) {
     return res.status(400).json({ success: false, message: 'Missing order creation fields' })
   }
+
+  const orderDetails = {
+    orderId: `TX-${Math.floor(Math.random() * 900000) + 100000}`,
+    playerId: userId,
+    zoneId: serverId,
+    gameCode: SupplierCheckoutRequest.gameCode || 'UNKNOWN',
+    baseAmount: SupplierCheckoutRequest.amount,
+  };
+  
+  const order = OrderFactory.createOrder(OrderType.STANDARD, orderDetails);
 
   const requestPayload = buildOrderCreateRequest({ flowId, userId, serverId, username, supplierCheckoutRequest: SupplierCheckoutRequest })
 
   const result = {
     Success: true,
     SupplierCheckoutResult: {
-      transactionId: `TX-${Math.floor(Math.random() * 900000) + 100000}`,
+      transactionId: order.orderId,
       status: 'approved',
-      amount: SupplierCheckoutRequest.amount,
+      amount: order.getFinalPrice(),
     },
   }
 
@@ -117,12 +133,12 @@ app.post('/in-game-topup/order/create', (req, res) => {
     supplierCheckoutResult: result.SupplierCheckoutResult,
     supplierDeliveryRequest: null,
     supplierDeliveryResult: null,
-    status: 'created',
+    status: order.getStatusString().toLowerCase(),
     createdAt: new Date().toISOString(),
   })
   saveDb()
 
-  return res.json({ success: true, orderId: result.SupplierCheckoutResult.transactionId, SupplierCheckoutResult: result.SupplierCheckoutResult })
+  return res.json({ success: true, orderId: order.orderId, SupplierCheckoutResult: result.SupplierCheckoutResult })
 })
 
 app.post('/in-game-topup/order/inquiry', (req, res) => {
@@ -165,11 +181,21 @@ const generateAbaHash = (reqTime, tranId, amount, itemsBase64, returnUrlBase64) 
   return crypto.createHmac('sha512', ABA_PUBLIC_KEY).update(dataString).digest('base64');
 };
 
-app.post('/in-game-topup/aba/checkout', (req, res) => {
-  const { amount } = req.body;
+app.post('/in-game-topup/aba/checkout', async (req, res) => {
+  const { amount, method } = req.body;
   if (!amount) {
     return res.status(400).json({ success: false, message: 'Missing amount' });
   }
+
+  const processor = new PaymentProcessor();
+  if (method === 'credit_card') {
+    processor.setStrategy(new CreditCardStrategy());
+  } else {
+    processor.setStrategy(new BankTransferStrategy()); // Default for ABA
+  }
+  
+  // Simulate processing payment via strategy pattern
+  await processor.processPayment(amount);
 
   // ABA Payway requires amount to be exactly 2 decimal places (e.g. "5.00")
   const formattedAmount = Number(amount).toFixed(2);
