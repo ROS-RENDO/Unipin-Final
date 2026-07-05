@@ -2,16 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FiSearch, FiFilter } from 'react-icons/fi';
 
-const ALL_GAMES = [
-  { id: 'mlbb', name: 'Mobile Legends', publisher: 'Moonton', img: '/images/mlbb.jpg', category: 'MOBA', discount: '10% OFF' },
-  { id: 'genshin', name: 'Genshin Impact', publisher: 'HoYoverse', img: '/images/genshin.jpg', category: 'RPG', discount: '15% OFF' },
-  { id: 'pubg', name: 'PUBG Mobile', publisher: 'Level Infinite', img: '/images/pubg.jpg', category: 'Shooter', discount: '20% OFF' },
-  { id: 'valorant', name: 'Valorant', publisher: 'Riot Games', img: '/images/valorant.jpg', category: 'Shooter', discount: '' },
-  { id: 'freefire', name: 'Free Fire', publisher: 'Garena', img: '/images/freefire.jpg', category: 'Shooter', discount: '5% OFF' },
-  { id: 'honkai', name: 'Honkai: Star Rail', publisher: 'HoYoverse', img: '/images/honkai.jpg', category: 'RPG', discount: 'First Top-Up' },
-  { id: 'clash', name: 'Clash of Clans', publisher: 'Supercell', img: '/images/clash.jpg', category: 'Strategy', discount: '' },
-  { id: 'roblox', name: 'Roblox', publisher: 'Roblox Corp', img: '/images/roblox.jpg', category: 'Sandbox', discount: '' },
-];
+import { games as ALL_GAMES } from '../data/games';
 
 const CATEGORIES = ['All', 'MOBA', 'RPG', 'Shooter', 'Strategy', 'Sandbox'];
 
@@ -72,7 +63,7 @@ export const Games = () => {
             <Link to={`/topup/${game.id}`} key={game.id} className="group">
               <div className="rounded-xl bg-slate-900 border border-slate-800 overflow-hidden relative aspect-square transition-all duration-300 hover:border-[#8b5cf6] hover:shadow-[0_0_20px_rgba(139,92,246,0.2)] hover:-translate-y-1">
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/30 to-transparent z-10"></div>
-                <img src={game.img} alt={game.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
+                <img src={game.image} alt={game.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
                 
                 {game.discount && (
                   <div className="absolute top-3 left-3 z-20">

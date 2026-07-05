@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { MdOutlineShoppingCart } from 'react-icons/md';
 import { useState } from 'react';
 import { useTopUp } from '../context/TopUpContext';
+import { games } from '../data/games';
 
 export const Home = () => {
   const navigate = useNavigate();
@@ -65,7 +66,7 @@ export const Home = () => {
           <Link to="/topup/pubg" className="col-span-2 md:col-span-2 group">
             <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden relative aspect-[21/9]">
               <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent z-10"></div>
-              <img src="/images/pubg.jpg" alt="PUBG" className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
+              <img src={games.find(g => g.id === 'pubg')?.image} alt="PUBG" className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
               <div className="absolute top-3 left-3 z-20">
                 <span className="bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded">UP TO 20% OFF</span>
               </div>
@@ -80,7 +81,7 @@ export const Home = () => {
           <Link to="/topup/genshin" className="group">
             <div className="rounded-xl bg-slate-900 border border-slate-800 overflow-hidden relative aspect-square flex items-center justify-center">
               <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent z-10"></div>
-              <img src="/images/genshin.jpg" alt="Genshin" className="w-full h-full object-cover z-0 group-hover:scale-110 transition duration-500 drop-shadow-xl" />
+              <img src={games.find(g => g.id === 'genshin')?.image} alt="Genshin" className="w-full h-full object-cover z-0 group-hover:scale-110 transition duration-500 drop-shadow-xl" />
               <div className="absolute bottom-3 left-3 z-20">
                 <h3 className="text-white font-bold text-sm">Genshin Impact</h3>
                 <p className="text-[#00f2fe] text-[10px] font-bold">15% OFF</p>
@@ -92,7 +93,7 @@ export const Home = () => {
           <Link to="/topup/mlbb" className="group">
             <div className="rounded-xl bg-slate-900 border border-slate-800 overflow-hidden relative aspect-square flex items-center justify-center">
               <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent z-10"></div>
-              <img src="/images/mlbb.jpg" alt="MLBB" className="w-full h-full object-cover z-0 group-hover:scale-110 transition duration-500 drop-shadow-xl" />
+              <img src={games.find(g => g.id === 'mlbb')?.image} alt="MLBB" className="w-full h-full object-cover z-0 group-hover:scale-110 transition duration-500 drop-shadow-xl" />
               <div className="absolute bottom-3 left-3 z-20">
                 <h3 className="text-white font-bold text-sm">Mobile Legends</h3>
                 <p className="text-[#00f2fe] text-[10px] font-bold">10% OFF</p>

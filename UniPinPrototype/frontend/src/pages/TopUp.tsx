@@ -14,16 +14,7 @@ const PACKAGES = [
   { id: '8', diamonds: 25000, price: 500.00, bonus: 7500 },
 ];
 
-const GAME_INFO: Record<string, { title: string, img: string }> = {
-  mlbb: { title: 'Mobile Legends: Bang Bang', img: '/images/mlbb.jpg' },
-  genshin: { title: 'Genshin Impact', img: '/images/genshin.jpg' },
-  pubg: { title: 'PUBG Mobile', img: '/images/pubg.jpg' },
-  valorant: { title: 'Valorant', img: '/images/valorant.jpg' },
-  freefire: { title: 'Free Fire', img: '/images/freefire.jpg' },
-  honkai: { title: 'Honkai: Star Rail', img: '/images/honkai.jpg' },
-  clash: { title: 'Clash of Clans', img: '/images/clash.jpg' },
-  roblox: { title: 'Roblox', img: '/images/roblox.jpg' },
-};
+import { games } from '../data/games';
 
 export const TopUp = () => {
   const navigate = useNavigate();
@@ -32,7 +23,7 @@ export const TopUp = () => {
   const [selectedPkg, setSelectedPkg] = useState(PACKAGES[1]);
   const [isValidating, setIsValidating] = useState(false);
 
-  const game = gameId && GAME_INFO[gameId] ? GAME_INFO[gameId] : GAME_INFO['mlbb'];
+  const game = games.find(g => g.id === gameId) || games[0];
 
   const handleValidate = async () => {
     setIsValidating(true);
@@ -68,10 +59,10 @@ export const TopUp = () => {
         <div className="md:sticky md:top-24">
           <div className="relative h-64 md:h-auto md:aspect-video w-full md:rounded-2xl overflow-hidden md:border border-slate-800 shadow-xl bg-[#1e293b]">
             <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a] via-[#0f172a]/40 to-transparent z-10"></div>
-            <img src={game.img} alt={game.title} className="w-full h-full object-cover z-0 drop-shadow-2xl hover:scale-105 transition duration-500" />
+            <img src={game.image} alt={game.name} className="w-full h-full object-cover z-0 drop-shadow-2xl hover:scale-105 transition duration-500" />
             <div className="absolute bottom-4 md:bottom-8 left-4 md:left-8 z-20">
               <span className="bg-[#00f2fe] text-slate-900 text-[10px] md:text-xs font-bold px-2 py-1 rounded uppercase mb-2 inline-block shadow-lg">Popular</span>
-              <h1 className="text-3xl md:text-4xl font-black text-white leading-tight">{game.title}</h1>
+              <h1 className="text-3xl md:text-4xl font-black text-white leading-tight">{game.name}</h1>
               <p className="text-slate-300 text-xs md:text-base mt-2 flex items-center gap-1"><span className="text-[#00f2fe]">⚡</span> Instant Delivery to Game Account</p>
             </div>
           </div>
@@ -79,7 +70,7 @@ export const TopUp = () => {
           <div className="hidden md:block mt-8 bg-[#1e293b]/50 p-6 rounded-2xl border border-slate-800">
             <h3 className="font-bold text-white mb-2 text-lg">About this game</h3>
             <p className="text-slate-400 text-sm leading-relaxed">
-              Top up {game.title} instantly! Enter your ID, select the value of your purchase, complete the payment, and the items will be added immediately to your {game.title} account.
+              Top up {game.name} instantly! Enter your ID, select the value of your purchase, complete the payment, and the items will be added immediately to your {game.name} account.
             </p>
           </div>
         </div>

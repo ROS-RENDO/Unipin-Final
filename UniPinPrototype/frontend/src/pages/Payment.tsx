@@ -12,6 +12,7 @@ export const Payment = () => {
   
   const [selectedMethod, setSelectedMethod] = useState('cc');
   const [isAbaProcessing, setIsAbaProcessing] = useState(false);
+  const [abaQr, setAbaQr] = useState<{ qrImage: string; deeplink: string; tranId: string } | null>(null);
   const processing = isProcessing || isAbaProcessing;
 
   useEffect(() => {
@@ -36,28 +37,16 @@ export const Payment = () => {
           body: JSON.stringify({ amount: pkg.price })
         });
         const data = await response.json();
-        if (data.success && data.formPayload) {
-          const form = document.createElement('form');
-          form.method = 'POST';
-          form.action = data.url;
-          
-          Object.keys(data.formPayload).forEach(key => {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = key;
-            input.value = data.formPayload[key];
-            form.appendChild(input);
-          });
-          
-          document.body.appendChild(form);
-          form.submit();
+        if (data.success && data.qrImage) {
+          // Show QR modal — no page navigation
+          setAbaQr({ qrImage: data.qrImage, deeplink: data.deeplink, tranId: data.tranId });
         } else {
-          toast.error('Failed to initiate ABA checkout');
-          setIsAbaProcessing(false);
+          toast.error(data.message || 'Failed to generate ABA QR');
         }
       } catch (error) {
         console.error(error);
         toast.error('Error connecting to payment gateway');
+      } finally {
         setIsAbaProcessing(false);
       }
       return;
@@ -74,8 +63,51 @@ export const Payment = () => {
 
   return (
     <div className="bg-[#0f172a] min-h-screen text-slate-100 flex flex-col pb-24 animate-in fade-in duration-300">
-      
-      {/* App Bar */}
+
+      {/* ABA QR Modal */}
+      {abaQr && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#1e293b] rounded-2xl border border-slate-700 p-6 max-w-sm w-full text-center shadow-2xl">
+            <h3 className="text-lg font-bold text-white mb-1">Scan with ABA Mobile</h3>
+            <p className="text-2xl font-black text-[#00f2fe] my-2">${pkg.price}</p>
+            <p className="text-xs text-slate-400 mb-4">Ref: <span className="font-mono text-[#00f2fe]">{abaQr.tranId}</span></p>
+            <div className="bg-white rounded-xl p-3 inline-block mb-4">
+              <img src={abaQr.qrImage} alt="ABA PayWay QR" className="w-48 h-48 object-contain" />
+            </div>
+            <p className="text-xs text-slate-400 mb-4">Open your ABA Mobile app and scan the QR code above to complete payment.</p>
+            {abaQr.deeplink && (
+              <a
+                href={abaQr.deeplink}
+                className="block w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl mb-3 transition text-sm"
+              >
+                Open ABA Mobile App
+              </a>
+            )}
+            <button
+              onClick={async () => { 
+                setAbaQr(null);
+                const success = await processPayment('aba');
+                if (success) {
+                  toast.success('Payment Successful!');
+                  navigate('/history');
+                } else {
+                  toast.error('Payment Failed. Please try again.');
+                }
+              }}
+              className="block w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2.5 rounded-xl transition text-sm"
+            >
+              I've Paid — Continue
+            </button>
+            <button
+              onClick={() => setAbaQr(null)}
+              className="mt-2 text-xs text-slate-500 hover:text-slate-300 transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="w-full max-w-6xl mx-auto flex items-center justify-between p-4 md:px-8 sticky top-0 bg-[#0f172a]/90 backdrop-blur-md z-40 border-b border-slate-800">
         <button onClick={() => navigate(-1)} className="text-slate-300 md:hover:text-white p-2 -ml-2 transition flex items-center gap-2">
           <FiArrowLeft size={20} /> <span className="hidden md:inline font-bold">Back</span>

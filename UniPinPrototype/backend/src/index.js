@@ -173,10 +173,10 @@ const getReqTime = () => {
   return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
 };
 
-const generateAbaHash = (reqTime, tranId, amount, itemsBase64, returnUrlBase64) => {
-  // Required string order for ABA: req_time + merchant_id + tran_id + amount + items + return_url
+const generateAbaHash = (reqTime, tranId, amount, itemsBase64, returnUrlBase64, paymentOption = 'abapay_khqr') => {
+  // Required string order for ABA: req_time + merchant_id + tran_id + amount + items + payment_option + return_url
   // Use BASE64 ENCODED values for hash calculation
-  const dataString = reqTime + ABA_MERCHANT_ID + tranId + amount + itemsBase64 + returnUrlBase64;
+  const dataString = reqTime + ABA_MERCHANT_ID + tranId + amount + itemsBase64 + paymentOption + returnUrlBase64;
   console.log('Hash input string:', dataString);
   return crypto.createHmac('sha512', ABA_PUBLIC_KEY).update(dataString).digest('base64');
 };
@@ -191,41 +191,66 @@ app.post('/in-game-topup/aba/checkout', async (req, res) => {
   if (method === 'credit_card') {
     processor.setStrategy(new CreditCardStrategy());
   } else {
-    processor.setStrategy(new BankTransferStrategy()); // Default for ABA
+    processor.setStrategy(new BankTransferStrategy());
   }
-  
-  // Simulate processing payment via strategy pattern
   await processor.processPayment(amount);
 
-  // ABA Payway requires amount to be exactly 2 decimal places (e.g. "5.00")
-  const formattedAmount = Number(amount).toFixed(2);
-
+  // The ABA sandbox merchant (ec476567) is configured for KHR (Cambodian Riel).
+  // Convert USD to KHR (e.g., $1 = 4000 KHR) and ensure it's a whole number string.
+  const khrAmount = Math.round(Number(amount) * 4000);
+  const formattedAmount = khrAmount.toString();
   const req_time = getReqTime();
   const tran_id = `TX-${Math.floor(Math.random() * 900000000) + 100000000}`;
-  
-  // Encode items and return_url to base64 FIRST
+
   const itemsRaw = JSON.stringify([{ name: 'Game Topup', quantity: '1', price: formattedAmount }]);
   const returnUrlRaw = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/history`;
-  
+
   const items = Buffer.from(itemsRaw).toString('base64');
   const return_url = Buffer.from(returnUrlRaw).toString('base64');
-  
-  // Calculate hash with BASE64 encoded values
+
   const hash = generateAbaHash(req_time, tran_id, formattedAmount, items, return_url);
 
-  return res.json({
-    success: true,
-    url: ABA_API_URL,
-    formPayload: {
-      req_time,
-      merchant_id: ABA_MERCHANT_ID,
-      tran_id,
-      amount: formattedAmount,
-      items,
-      hash,
-      return_url
-    }
+  // Build the form body to POST to ABA PayWay
+  const formBody = new URLSearchParams({
+    req_time,
+    merchant_id: ABA_MERCHANT_ID,
+    tran_id,
+    amount: formattedAmount,
+    items,
+    hash,
+    return_url,
+    payment_option: 'abapay_khqr',
   });
+
+  try {
+    // Call ABA PayWay server-side — get QR code back without navigating the user away
+    const abaResponse = await fetch(ABA_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formBody.toString(),
+    });
+
+    const abaData = await abaResponse.json();
+    console.log('ABA response:', JSON.stringify(abaData?.status));
+
+    if (abaData.status?.code === '00') {
+      return res.json({
+        success: true,
+        qrImage: abaData.qrImage,
+        qrString: abaData.qrString,
+        deeplink: abaData.abapay_deeplink,
+        tranId: tran_id,
+      });
+    } else {
+      return res.status(502).json({
+        success: false,
+        message: abaData.status?.message || 'ABA PayWay request failed',
+      });
+    }
+  } catch (err) {
+    console.error('ABA fetch error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to reach ABA PayWay' });
+  }
 });
 
 const PORT = process.env.PORT || 4000;
