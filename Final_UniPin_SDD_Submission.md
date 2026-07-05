@@ -284,41 +284,8 @@ classDiagram
         +deliver(orderId, amount) void
     }
 
-    class MoontonAdapter {
-        -moontonSDK MoontonLegacySystem
-        +getServerList(gameCode) void
-        +verify(playerId, zoneID) void
-        +checkout(orderId, amount) void
-        +deliver(orderId, amount) void
-    }
-
-    class TencentAdapter {
-        -tencentSDK TencentRestAPI
-        +getServerList(gameCode) void
-        +verify(playerId, zoneID) void
-        +checkout(orderId, amount) void
-        +deliver(orderId, amount) void
-    }
-
-    class MoontonLegacySystem {
-        <<Third-Party>>
-        +checkAccountValid(accId, serverId)
-        +addDiamonds(txId, accId, serverId, count)
-    }
-
-    class TencentRestAPI {
-        <<Third-Party>>
-        +validateSession(openId)
-        +grantGameCurrency(orderId, openId, amount)
-    }
-
-    GamePublisherAPI <|.. MoontonAdapter
-    GamePublisherAPI <|.. TencentAdapter
-    MoontonAdapter --> MoontonLegacySystem : adapts
-    TencentAdapter --> TencentRestAPI : adapts
-
     TopUpOrder ..> PublisherFacade : validate/deliver
-    PublisherFacade ..> GamePublisherAPI : routes to specific adapter
+    PublisherFacade ..> GamePublisherAPI : connects to
 ```
 
 ### Sequence Diagram
@@ -450,7 +417,7 @@ stateDiagram-v2
 
 ## Design Patterns
 
-We have applied 6 design patterns to solve specific architectural problems in the UniPin System.
+We have applied 5 design patterns to solve specific architectural problems in the UniPin System.
 
 ### Creational
 | Pattern | Problem Solved | Location in Class Diagram |
@@ -462,7 +429,6 @@ We have applied 6 design patterns to solve specific architectural problems in th
 | Pattern | Problem Solved | Location in Class Diagram |
 | :--- | :--- | :--- |
 | **Facade Pattern** | UniPin connects to dozens of different Game Publishers (Moonton, Tencent), all with entirely different APIs. The core system shouldn't know these details. | `PublisherFacade` class. It shields the `TopUpOrder` from the complexity of external APIs. |
-| **Adapter Pattern** | Third-party game publishers have incompatible, proprietary APIs. We need a unified way to communicate with them. | `MoontonAdapter`, `TencentAdapter` implementing `GamePublisherAPI`. |
 
 ### Behavioral
 | Pattern | Problem Solved | Location in Class Diagram |
@@ -488,7 +454,7 @@ flowchart TD
 
     subgraph Integration Layer
         Facade[Publisher Facade]
-        Adapters[Moonton/Tencent Adapters]
+        GamePubs[Game Publishers APIs]
     end
 
     subgraph Data Access Layer
@@ -500,7 +466,7 @@ flowchart TD
     OrderSvc --> PromoSvc
     OrderSvc --> PaySvc
     OrderSvc --> Facade
-    Facade --> Adapters
+    Facade --> GamePubs
     
     OrderSvc --> DB
     PromoSvc --> DB
