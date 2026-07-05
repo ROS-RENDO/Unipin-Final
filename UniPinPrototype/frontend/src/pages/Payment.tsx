@@ -7,11 +7,10 @@ import toast from 'react-hot-toast';
 export const Payment = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { playerId, checkout, processPayment, isProcessing, currentOrder } = useTopUp();
+  const { playerId, checkout, processPayment, isProcessing } = useTopUp();
   const pkg = location.state?.pkg;
-  
+
   const [selectedMethod, setSelectedMethod] = useState('cc');
-  const [promoInput, setPromoInput] = useState('');
   const [isAbaProcessing, setIsAbaProcessing] = useState(false);
   const [abaQr, setAbaQr] = useState<{ qrImage: string; deeplink: string; tranId: string } | null>(null);
   const processing = isProcessing || isAbaProcessing;
@@ -35,7 +34,7 @@ export const Payment = () => {
         const response = await fetch(`${backendUrl}/in-game-topup/aba/checkout`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: currentOrder?.getFinalPrice() || pkg.price })
+          body: JSON.stringify({ amount: pkg.price })
         });
         const data = await response.json();
         if (data.success && data.qrImage) {
@@ -70,7 +69,7 @@ export const Payment = () => {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-[#1e293b] rounded-2xl border border-slate-700 p-6 max-w-sm w-full text-center shadow-2xl">
             <h3 className="text-lg font-bold text-white mb-1">Scan with ABA Mobile</h3>
-            <p className="text-2xl font-black text-[#00f2fe] my-2">${currentOrder?.getFinalPrice() || pkg.price}</p>
+            <p className="text-2xl font-black text-[#00f2fe] my-2">${pkg.price}</p>
             <p className="text-xs text-slate-400 mb-4">Ref: <span className="font-mono text-[#00f2fe]">{abaQr.tranId}</span></p>
             <div className="bg-white rounded-xl p-3 inline-block mb-4">
               <img src={abaQr.qrImage} alt="ABA PayWay QR" className="w-48 h-48 object-contain" />
@@ -85,7 +84,7 @@ export const Payment = () => {
               </a>
             )}
             <button
-              onClick={async () => { 
+              onClick={async () => {
                 setAbaQr(null);
                 const success = await processPayment('aba');
                 if (success) {
@@ -123,7 +122,7 @@ export const Payment = () => {
 
       <div className="w-full max-w-5xl mx-auto p-4 md:p-8 flex-1">
         <div className="md:grid md:grid-cols-[1fr_1.5fr] gap-8 md:items-start">
-          
+
           {/* Order Details Card */}
           <div className="bg-gradient-to-br from-[#1e293b] to-[#0f172a] rounded-2xl p-5 md:p-8 border border-slate-800 shadow-lg mb-6 md:mb-0 md:sticky md:top-24">
             <div className="flex justify-between items-start mb-4">
@@ -133,41 +132,14 @@ export const Payment = () => {
               </div>
               <div className="text-right">
                 <p className="text-[10px] md:text-xs text-slate-400 font-bold tracking-widest uppercase mb-1">Total</p>
-                {currentOrder && currentOrder.getFinalPrice() < pkg.price ? (
-                  <>
-                    <h2 className="text-sm md:text-base font-medium text-slate-500 line-through">${pkg.price}</h2>
-                    <h2 className="text-2xl md:text-3xl font-black text-[#00f2fe]">${currentOrder.getFinalPrice()}</h2>
-                  </>
-                ) : (
-                  <h2 className="text-2xl md:text-3xl font-black text-[#00f2fe]">${pkg.price}</h2>
-                )}
+                <h2 className="text-2xl md:text-3xl font-black text-[#00f2fe]">${pkg.price}</h2>
               </div>
             </div>
-            
-            {/* Promo Code Input */}
-            <div className="mt-4 pt-4 border-t border-slate-800/50">
-              <p className="text-xs text-slate-400 mb-2">Have a promo code? (Try WELCOME20)</p>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Enter code"
-                  value={promoInput}
-                  onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
-                  className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#8b5cf6]"
-                />
-                <button
-                  onClick={() => checkout(selectedMethod, pkg.price, promoInput)}
-                  className="bg-[#8b5cf6] hover:bg-[#7c3aed] text-white px-4 py-2 rounded-lg text-sm font-bold transition"
-                >
-                  Apply
-                </button>
-              </div>
-            </div>
-            
+
             <div className="space-y-4 mt-6 pt-6 border-t border-slate-800/50">
               <div className="flex justify-between items-center text-sm md:text-base text-slate-300">
                 <span className="flex items-center gap-2">
-                  <span className="text-[#00f2fe]"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></span>
+                  <span className="text-[#00f2fe]"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" /></svg></span>
                   Item
                 </span>
                 <span className="font-medium text-white">{pkg.diamonds} Diamonds</span>
@@ -187,11 +159,11 @@ export const Payment = () => {
             <h3 className="text-sm md:text-lg font-bold text-white mb-4 flex items-center gap-2">
               <span className="text-[#8b5cf6]">💳</span> Select Payment Method
             </h3>
-            
+
             <div className="space-y-3 md:space-y-4">
-              
+
               {/* ABA PayWay */}
-              <div 
+              <div
                 onClick={() => setSelectedMethod('aba')}
                 className={`p-4 md:p-5 rounded-xl border flex items-center gap-4 cursor-pointer transition-all ${selectedMethod === 'aba' ? 'bg-[#1e293b] border-[#00f2fe] shadow-[0_0_15px_rgba(0,242,254,0.1)] scale-[1.01]' : 'bg-[#0f172a] border-slate-800 opacity-60 hover:opacity-100 hover:bg-[#1e293b]/50'}`}
               >
@@ -206,14 +178,14 @@ export const Payment = () => {
                   {selectedMethod === 'aba' && <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#00f2fe]"></div>}
                 </div>
               </div>
-              
+
               {/* Razer Gold */}
-              <div 
+              <div
                 onClick={() => setSelectedMethod('razer')}
                 className={`p-4 md:p-5 rounded-xl border flex items-center gap-4 cursor-pointer transition-all ${selectedMethod === 'razer' ? 'bg-[#1e293b] border-[#00f2fe] shadow-[0_0_15px_rgba(0,242,254,0.1)] scale-[1.01]' : 'bg-[#0f172a] border-slate-800 opacity-60 hover:opacity-100 hover:bg-[#1e293b]/50'}`}
               >
                 <div className="w-10 h-10 md:w-12 md:h-12 rounded bg-green-500/20 flex items-center justify-center text-green-500">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" /></svg>
                 </div>
                 <div className="flex-1">
                   <h4 className="font-bold text-white text-sm md:text-base">Razer Gold</h4>
@@ -225,7 +197,7 @@ export const Payment = () => {
               </div>
 
               {/* PayPal */}
-              <div 
+              <div
                 onClick={() => setSelectedMethod('paypal')}
                 className={`p-4 md:p-5 rounded-xl border flex items-center gap-4 cursor-pointer transition-all ${selectedMethod === 'paypal' ? 'bg-[#1e293b] border-[#00f2fe] shadow-[0_0_15px_rgba(0,242,254,0.1)] scale-[1.01]' : 'bg-[#0f172a] border-slate-800 opacity-60 hover:opacity-100 hover:bg-[#1e293b]/50'}`}
               >
@@ -242,7 +214,7 @@ export const Payment = () => {
               </div>
 
               {/* Credit Card */}
-              <div 
+              <div
                 onClick={() => setSelectedMethod('cc')}
                 className={`p-4 md:p-5 rounded-xl border flex items-center gap-4 cursor-pointer transition-all ${selectedMethod === 'cc' ? 'bg-[#1e293b] border-[#00f2fe] shadow-[0_0_15px_rgba(0,242,254,0.1)] scale-[1.01]' : 'bg-[#0f172a] border-slate-800 opacity-60 hover:opacity-100 hover:bg-[#1e293b]/50'}`}
               >
@@ -257,12 +229,12 @@ export const Payment = () => {
                   {selectedMethod === 'cc' && <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#00f2fe]"></div>}
                 </div>
               </div>
-              
+
             </div>
 
             {/* Desktop Pay Button */}
             <div className="hidden md:block mt-8">
-              <button 
+              <button
                 onClick={handlePay}
                 disabled={processing}
                 className="w-full bg-gradient-to-r from-[#00f2fe] to-[#8b5cf6] text-white font-bold py-4 rounded-xl shadow-[0_0_20px_rgba(139,92,246,0.4)] hover:shadow-[0_0_25px_rgba(0,242,254,0.6)] transition flex justify-center items-center gap-3 text-lg disabled:opacity-50 disabled:shadow-none"
@@ -279,7 +251,7 @@ export const Payment = () => {
 
       {/* Sticky Bottom Bar (Mobile Only) */}
       <div className="md:hidden fixed bottom-0 w-full max-w-md bg-[#0f172a]/95 backdrop-blur-md border-t border-slate-800 p-4 z-50 rounded-t-2xl">
-        <button 
+        <button
           onClick={handlePay}
           disabled={processing}
           className="w-full bg-gradient-to-r from-[#00f2fe] to-[#8b5cf6] text-white font-bold py-3.5 rounded-xl shadow-[0_0_15px_rgba(139,92,246,0.4)] transition flex justify-center items-center gap-2 disabled:opacity-50 disabled:shadow-none"
