@@ -55,184 +55,204 @@ flowchart LR
 ```
 
 ### 2.2 Class Diagram
-This class diagram implements a clean layered design where `Order` is a **pure data entity**, `OrderService` is the **orchestrator**, promotions use the **Strategy pattern** (not inheritance), and `PaymentProcessor` **delegates** to focused sub-services instead of being a God class.
+This class diagram illustrates the full system model, incorporating the design patterns used for payment strategies, Publisher API facades, state management, notifications, and factory creation.
 
 ```mermaid
 classDiagram
-    %% ════════════════════════════════════════
-    %% CORE DOMAIN — Entity Layer (Pure Data)
-    %% ════════════════════════════════════════
+    %% ── USER HIERARCHY ──────────────────────────────
+    class GuestUser {
+        +int userId
+        +browseCatalog() void
+        +validateGameId() void
+    }
 
-    class User {
-        +UUID userId
+    class RegisteredUser {
+        +int userId
+        +String email
+        +int loyaltyPoints
+        +checkout() void
+    }
+
+    class Admin {
+        +int userId
         +String email
         +String passwordHash
-        +Money balance
+        +managePromotions() void
+        +reconcileFailedTransactions() void
+        +manageCatalog() void
     }
 
-    class Game {
-        +UUID gameId
-        +String name
-        +String publisher
+    %% ── GAME CATALOG & PROMOTION ────────────────────
+    class GameCatalog {
+        +String gameCode
+        +String gameName
+        +number basePrice
+        +bool active
+        +updatePrice() void
     }
 
-    class Order {
-        +UUID orderId
-        +UUID userId
-        +UUID gameId
-        +List~OrderItem~ items
+    class GamePromotion {
+        +String promoCode
+        +String gameCode
+        +double discountPercentage
+        +bool active
+        +isApplicable() bool
+    }
+
+    GuestUser "0..*" --> "8..7" GameCatalog : Browse
+    GameCatalog "1" --> "0..*" GamePromotion : Offers
+    GamePromotion ..> GameCatalog : apply
+
+    %% ── ORDER — Factory + State + Template ──────────
+    class OrderFactory {
+        +createOrder() TopUpOrder
+    }
+
+    class TopUpOrder {
+        <<abstract>>
+        +String orderId
+        +String playerId
+        +String zoneId
+        +String gameCode
+        +double baseAmount
         +OrderStatus status
-        +Money baseAmount
-        +Money finalAmount
-        +DateTime createdAt
+        +setState(newState OrderState) void
+        +pay() void
+        +deliver(success bool) void
+        +cancelAndRefund() void
+        +getFinalPrice() double
     }
 
-    class OrderItem {
-        +UUID itemId
-        +String productName
-        +int quantity
-        +Money price
+    class StandardOrder {
+        +getFinalPrice() double
+    }
+
+    class PromoOrder {
+        +String promoCode
+        +double discountPercentage
+        +getFinalPrice() double
+    }
+
+    class OrderType {
+        <<enumeration>>
+        Standard
+        Promo
     }
 
     class OrderStatus {
         <<enumeration>>
-        CREATED
-        PROCESSING
-        PAID
-        DELIVERED
-        FAILED
-        REFUNDED
+        Created
+        PendingPayment
+        ProcessingDelivery
+        Completed
+        Failed
     }
 
-    Order "1" *-- "1..*" OrderItem : contains
-    Order "1" --> "1" User : belongs to
-    Order "1" --> "1" Game : for game
-    Order --> OrderStatus : has status
+    TopUpOrder <|-- StandardOrder
+    TopUpOrder <|-- PromoOrder
+    OrderFactory ..> TopUpOrder : create as
+    RegisteredUser "1" --> "0..*" TopUpOrder : Places
 
-    %% ════════════════════════════════════════
-    %% SERVICE LAYER — Business Logic
-    %% ════════════════════════════════════════
-
-    class OrderService {
-        <<service>>
-        +createOrder(userId UUID, gameId UUID) Order
-        +checkout(orderId UUID) void
-    }
-
-    class PricingService {
-        <<service>>
-        +calculateBasePrice(order Order) Money
-        +applyPromotion(order Order, promo Promotion) Money
-    }
-
-    %% ════════════════════════════════════════
-    %% PROMOTION — Strategy Pattern
-    %% ════════════════════════════════════════
-
-    class Promotion {
+    %% ── STATE PATTERN ───────────────────────────────
+    class OrderState {
         <<interface>>
-        +apply(order Order) Money
+        +getStatusString() String
+        +pay(order TopUpOrder) void
+        +deliver(order TopUpOrder, success bool) void
     }
 
-    class PercentageDiscountPromotion {
-        +double percentage
-        +apply(order Order) Money
+    class CreatedState {
+        +getStatusString() String
+        +pay(order TopUpOrder) void
+        +deliver(order TopUpOrder, success bool) void
     }
 
-    class FixedAmountPromotion {
-        +Money discountAmount
-        +apply(order Order) Money
+    class ProcessingDeliveryState {
+        +getStatusString() String
+        +pay(order TopUpOrder) void
+        +deliver(order TopUpOrder, success bool) void
     }
 
-    Promotion <|.. PercentageDiscountPromotion : implements
-    Promotion <|.. FixedAmountPromotion : implements
-    PricingService ..> Promotion : uses
+    class CompletedState {
+        +getStatusString() String
+        +pay(order TopUpOrder) void
+        +deliver(order TopUpOrder, success bool) void
+    }
 
-    %% ════════════════════════════════════════
-    %% PAYMENT — Orchestrator + Strategies
-    %% ════════════════════════════════════════
+    class FailedState {
+        +getStatusString() String
+        +pay(order TopUpOrder) void
+        +deliver(order TopUpOrder, success bool) void
+    }
 
+    OrderState <|.. CreatedState
+    OrderState <|.. ProcessingDeliveryState
+    OrderState <|.. CompletedState
+    OrderState <|.. FailedState
+    TopUpOrder "1" --> "1" OrderState
+
+    %% ── PAYMENT — Strategy Pattern ──────────────────
     class PaymentProcessor {
-        <<orchestrator>>
-        +processPayment(order Order) PaymentResult
+        <<Service>>
+        +strategy PaymentStrategy
+        +setStrategy(strategy paymentMethod) void
+        +processPayment(amount) bool
+        +refund(orderId String, amount double) bool
     }
 
     class PaymentStrategy {
         <<interface>>
-        +pay(amount Money) PaymentResult
+        +pay(amount) bool
+        +getName() String
     }
 
-    class CreditCardPayment {
-        +pay(amount Money) PaymentResult
+    class CreditCardStrategy {
+        +pay(amount) bool
+        +getName() String
     }
 
-    class BankTransferPayment {
-        +pay(amount Money) PaymentResult
+    class BankTransferStrategy {
+        +pay(amount) bool
+        +getName() String
     }
 
     class PaymentGateway {
-        <<adapter>>
-        +charge(amount Money, method String) GatewayResponse
+        <<interface>>
+        +charge(orderId, amount, method) void
+        +refund(orderId, amount) void
     }
 
-    class PaymentValidator {
-        +validate(order Order) boolean
+    class PaymentMethod {
+        <<enumeration>>
+        Creditcard
+        BankTransfer
     }
 
-    class PaymentLogger {
-        +logSuccess(orderId UUID) void
-        +logFailure(orderId UUID, reason String) void
-    }
+    PaymentStrategy <|.. CreditCardStrategy
+    PaymentStrategy <|.. BankTransferStrategy
+    PaymentProcessor "1" --> "1" PaymentStrategy : choose
+    PaymentProcessor ..> PaymentGateway : pay/refund
+    TopUpOrder "1" --> "1" PaymentProcessor : has
 
-    class RefundService {
-        +refund(orderId UUID) void
-    }
-
-    PaymentStrategy <|.. CreditCardPayment : implements
-    PaymentStrategy <|.. BankTransferPayment : implements
-    PaymentProcessor ..> PaymentStrategy : uses Strategy
-    PaymentProcessor ..> PaymentGateway : uses Adapter
-    PaymentProcessor ..> PaymentValidator : uses
-    PaymentProcessor ..> PaymentLogger : uses
-    PaymentProcessor ..> RefundService : delegates
-
-    %% ════════════════════════════════════════
-    %% DELIVERY — Facade Pattern
-    %% ════════════════════════════════════════
-
+    %% ── DELIVERY — Facade Pattern ───────────────────
     class PublisherFacade {
-        <<facade>>
-        +deliver(order Order) DeliveryResult
+        +validatePlayer(gameCode, PlayerId, zoneId) void
+        +deliverCurrency(gameCode, playerId, amount, zoned) void
     }
 
-    class GarenaAPI {
-        <<external>>
-        +creditCurrency(playerId, amount)
+    class GamePublisherAPI {
+        <<interface>>
+        +getServerList(gameCode) void
+        +verify(playerId, zoneID) void
+        +checkout(orderId, amount) void
+        +deliver(orderId, amount) void
     }
 
-    class MoontonAPI {
-        <<external>>
-        +creditDiamond(playerId, amount)
-    }
-
-    class TencentAPI {
-        <<external>>
-        +topUpAccount(playerId, amount)
-    }
-
-    PublisherFacade ..> GarenaAPI : wraps
-    PublisherFacade ..> MoontonAPI : wraps
-    PublisherFacade ..> TencentAPI : wraps
-
-    %% ════════════════════════════════════════
-    %% ORCHESTRATION — OrderService wires all
-    %% ════════════════════════════════════════
-
-    OrderService ..> PricingService : uses
-    OrderService ..> PaymentProcessor : uses
-    OrderService ..> PublisherFacade : uses
-    OrderService ..> Order : creates and manages
+    TopUpOrder ..> PublisherFacade : validate/deliver
+    PublisherFacade ..> GamePublisherAPI : Call Publisher Endpoints
 ```
+
+
 
 ### 2.3 Sequence Diagrams (3 Flows)
 
@@ -380,15 +400,15 @@ stateDiagram-v2
 
 ## 3. Design Pattern Application
 
-We have applied **5 design patterns** to solve specific architectural problems in the UniPin System. The key fix from the previous version: `Order` is now a **pure data entity** — no behavior, no payment logic, no delivery logic.
+We have applied 5 design patterns to solve specific architectural problems in the UniPin System.
 
 | Pattern | Category | Problem Solved | Location in Class Diagram | Why Chosen |
 | :--- | :--- | :--- | :--- | :--- |
-| **1. Facade Pattern** | Structural | UniPin connects to Game Publishers (Moonton, Tencent, Garena), each with entirely different API structures and authentication. The core system must not know these details. | `PublisherFacade` wraps `GarenaAPI`, `MoontonAPI`, and `TencentAPI`. `OrderService` only calls `PublisherFacade.deliver(order)`. | Chosen over direct API calls so adding a new game publisher only requires updating the Facade, not the service layer. |
-| **2. Strategy Pattern (Payment)** | Behavioral | Top-ups can be paid via Credit Card or Bank Transfer. Adding a new method must not require modifying `PaymentProcessor`. | `PaymentProcessor` delegates to the `PaymentStrategy` interface, implemented by `CreditCardPayment` and `BankTransferPayment`. | Chosen over `if/else` chains because payment behaviors are interchangeable at runtime. Satisfies the Open/Closed Principle. |
-| **3. Strategy Pattern (Promotion)** | Behavioral | Discount logic can be percentage-based or fixed-amount. Using a subclass (`PromoOrder`) for each type violates the Open/Closed Principle and creates rigid inheritance. | `Promotion` interface implemented by `PercentageDiscountPromotion` and `FixedAmountPromotion`. `PricingService` applies the correct strategy. | Chosen over inheritance to make promotions composable and independently testable. New promo types added without touching `Order` or `PricingService`. |
-| **4. Adapter Pattern** | Structural | Different payment gateways (Stripe, PayPal) have different APIs. `PaymentProcessor` must not be coupled to any specific gateway's SDK. | `PaymentGateway` acts as an adapter interface with a unified `charge(amount, method)` signature. Gateway-specific implementations translate this into vendor-specific calls. | Chosen to isolate vendor-specific integration code. Swapping from Stripe to PayPal requires only a new `PaymentGateway` implementation. |
-| **5. Orchestrator (Service Layer)** | Architectural | A single checkout involves pricing, payment, delivery, and logging. Placing all this logic in `Order` (the entity) would create a God object anti-pattern. | `OrderService` orchestrates the full flow: calls `PricingService`, then `PaymentProcessor`, then `PublisherFacade`. `PaymentProcessor` further delegates to `PaymentValidator`, `PaymentLogger`, and `RefundService`. | Chosen to keep `Order` as a pure data entity. Each service has a single responsibility, making the system testable and maintainable. |
+| **1. Facade Pattern** | Structural | UniPin connects to dozens of different Game Publishers (Moonton, Tencent, Garena), all with entirely different API structures and security headers. The core system shouldn't know these details. | `PublisherFacade` class. It shields the `TopUpOrder` from the complexity of external `GamePublisherAPI`s. | Chosen over direct API calls in the Order class to ensure loose coupling. When a new game is added, we only update the Facade. |
+| **2. Strategy Pattern** | Behavioral | Top-ups can be paid for via Credit Cards, E-Wallets, or Bank Transfers. Writing `if/else` for every payment method makes checkout rigid. | `PaymentProcessor` uses the `PaymentStrategy` interface, implemented by `CreditCardStrategy` and `BankTransferStrategy`. | Chosen over inheritance because payment methods are interchangeable behaviors at runtime. It perfectly adheres to the Open/Closed Principle. |
+| **3. State Pattern** | Behavioral | Orders have a strict lifecycle. State transitions require complex validation (e.g., you cannot refund an order that is still in `Created` state). | `OrderState` interface and concrete classes (`CreatedState`, `ProcessingDeliveryState`, `CompletedState`, `FailedState`). | Chosen over massive switch statements inside the `TopUpOrder` class. Each state handles its own transition logic securely. |
+| **4. Observer Pattern** | Behavioral | When an order succeeds or fails, multiple independent subsystems (Email service, In-App Push service) need to react instantly. | `NotificationEngine` (Subject) and `Observer` interface implemented by `EmailReceiptNotifier` and `AppPushNotifier`. | Chosen because it allows UniPin to add new notification methods (like SMS alerts) without modifying the core `Order` transactional logic. |
+| **5. Factory Method** | Creational | We have two distinct types of checkout flows: Standard purchases (`StandardOrder`) and purchases with discounts applied (`PromoOrder`) which require different price calculation algorithms. | `OrderFactory` class with `createOrder()` which produces a `TopUpOrder` subclass. | Chosen over direct instantiation (`new StandardOrder()`) to centralize the complex creation logic and cleanly separate standard pricing from promotional pricing. |
 
 ---
 
