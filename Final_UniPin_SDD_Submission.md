@@ -51,7 +51,7 @@ This project will be solely focusing on the TopUp system and won’t be touching
 ### Functional Requirements
 - **FR-01 In-game Account Link:** Users should be able to link with their in-game account just with their game id
 - **FR-02 Payment method:** Users should be able to choose a payment method. (ABA, ACELEDA, and etc)
-- **FR-03 Promo-codes:** Users should be able to use promo-codes alongside their purchases to get a discount.
+- **FR-03 Discount on package:** Promotion and discount is applied directly to each top up package of each game.
 - **FR-04 Currency denomination selector:** Users should be able to select the amount of currency that they want to pay for.
 - **FR-05 Confirm popup before payment:** Users should confirm before payment if they’re making payment to the right account.
 
