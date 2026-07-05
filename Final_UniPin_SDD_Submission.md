@@ -76,10 +76,9 @@ This project will be solely focusing on the TopUp system and won’t be touching
   - The User initiates the process by interacting with the Browse Game use case.
   - Browse Game has an `<<extend>>` relationship to Select Game, showing the flow moves to game selection.
   - Select Game has an `<<extend>>` relationship to Buy currency, indicating the user can proceed to purchase.
-  - Apply Coupon is connected to Buy currency via a `<<extend>>` and dashed line, representing an optional step during the buying process.
   - The Buy currency use case has three mandatory `<<include>>` relationships that must be executed:
     - Enter PlayerID
-    - Select Denomination
+    - Select Denomination (Package)
     - Process Payment
   - The Enter PlayerID use case further includes (`<<include>>`) Verify Player, meaning player verification is a required part of entering the ID.
   - The Process Payment use case includes (`<<include>>`) Generate Receipt, meaning a receipt is mandatorily created when payment is processed.
@@ -101,7 +100,6 @@ flowchart LR
         UC_Browse("Browse Game")
         UC_Select("Select Game")
         UC_Purchase("Buy currency")
-        UC_Promo("Apply Coupon")
         
         UC_EnterID("Enter PlayerID")
         UC_SelectDenom("Select Denomination")
@@ -115,7 +113,6 @@ flowchart LR
         %% Extends
         UC_Select -. "<<extend>>" .-> UC_Browse
         UC_Purchase -. "<<extend>>" .-> UC_Select
-        UC_Promo -. "<<extend>>" .-> UC_Purchase
         
         %% Includes
         UC_Purchase -. "<<include>>" .-> UC_EnterID
@@ -161,60 +158,52 @@ classDiagram
         +manageCatalog() void
     }
 
-    %% ── GAME CATALOG & PROMOTION ────────────────────
+    %% ── GAME CATALOG — Singleton Pattern ────────────
     class GameCatalog {
-        +String gameCode
-        +String gameName
-        +number basePrice
-        +bool active
-        +updatePrice() void
+        -GameCatalog instance
+        -List gameData
+        -GameCatalog()
+        +getInstance() GameCatalog
+        +getAllGames() List
+        +getGameById(id String) Game
     }
 
-    class GamePromotion {
-        +String promoCode
-        +String gameCode
-        +double discountPercentage
-        +bool active
-        +isApplicable() bool
+    class Package {
+        +String packageId
+        +number amount
+        +number originalPrice
+        +number price
     }
 
-    GuestUser "0..*" --> "8..7" GameCatalog : Browse
-    GameCatalog "1" --> "0..*" GamePromotion : Offers
-    GamePromotion ..> GameCatalog : apply
+    GameCatalog "1" *-- "0..*" Package : manages
+    GuestUser "0..*" --> "1" GameCatalog : Browse
 
-    %% ── ORDER — Factory Method Pattern ──────────
-    class OrderFactory {
-        +createOrder() TopUpOrder
+    %% ── ORDER — Builder Pattern ──────────
+    class OrderBuilder {
+        -TopUpOrder order
+        +OrderBuilder()
+        +setGameCode(gameCode String) OrderBuilder
+        +setPlayer(playerId String, zoneId String) OrderBuilder
+        +setPackage(packageId String, amount number, price number) OrderBuilder
+        +build() TopUpOrder
     }
 
     class TopUpOrder {
-        <<abstract>>
         +String orderId
         +String playerId
         +String zoneId
+        +String packageId
         +String gameCode
-        +double baseAmount
+        +double amount
+        +double finalPrice
         +OrderStatus status
         +setState(newState OrderState) void
         +pay() void
         +deliver(success bool) void
-        +cancelAndRefund() void
         +getFinalPrice() double
     }
 
-    class StandardOrder {
-        +getFinalPrice() double
-    }
-
-    class PromoOrder {
-        +String promoCode
-        +double discountPercentage
-        +getFinalPrice() double
-    }
-
-    TopUpOrder <|-- StandardOrder
-    TopUpOrder <|-- PromoOrder
-    OrderFactory ..> TopUpOrder : creates
+    OrderBuilder ..> TopUpOrder : constructs
 
     %% ── STATE PATTERN ───────────────────────────────
     class OrderState {
@@ -461,12 +450,13 @@ stateDiagram-v2
 
 ## Design Patterns
 
-We have applied 5 design patterns to solve specific architectural problems in the UniPin System.
+We have applied 6 design patterns to solve specific architectural problems in the UniPin System.
 
 ### Creational
 | Pattern | Problem Solved | Location in Class Diagram |
 | :--- | :--- | :--- |
-| **Factory Method** | We have distinct types of checkout flows: Standard purchases and Promotional purchases which require different price calculations. | `OrderFactory` class with `createOrder()` which produces a `TopUpOrder` subclass (`PromoOrder` or `StandardOrder`). |
+| **Singleton Pattern** | Centralized management of games and packages (the source of truth where Admin applies package discounts) so only a single instance of the catalog is loaded globally. | `GameCatalog` class with `getInstance()`. |
+| **Builder Pattern** | A `TopUpOrder` requires setting multiple complex fields (playerId, zoneId, package details). Builder helps construct the order step-by-step cleanly. | `OrderBuilder` class with methods like `setPlayer()`, `setPackage()`, and `build()`. |
 
 ### Structural
 | Pattern | Problem Solved | Location in Class Diagram |
