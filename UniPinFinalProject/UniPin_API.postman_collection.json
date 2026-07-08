@@ -6,7 +6,48 @@
 	},
 	"item": [
 		{
-			"name": "Verify Player",
+			"name": "Get Games Catalog",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:3001/api/games",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3001",
+					"path": [
+						"api",
+						"games"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Server List (MLBB)",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:3001/api/servers/MLBB",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3001",
+					"path": [
+						"api",
+						"servers",
+						"MLBB"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Verify Player (Valid)",
 			"request": {
 				"method": "POST",
 				"header": [
@@ -17,7 +58,36 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"gameCode\": \"MLBB\",\n    \"playerId\": \"12345\",\n    \"zoneId\": \"123\"\n}"
+					"raw": "{\n    \"gameCode\": \"MLBB\",\n    \"playerId\": \"12345678\",\n    \"zoneId\": \"2001\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:3001/api/verify",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3001",
+					"path": [
+						"api",
+						"verify"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Verify Player (Invalid Zone)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"gameCode\": \"MLBB\",\n    \"playerId\": \"12345678\",\n    \"zoneId\": \"9999\"\n}"
 				},
 				"url": {
 					"raw": "http://localhost:3001/api/verify",
@@ -46,7 +116,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"code\": \"DISCOUNT10\"\n}"
+					"raw": "{\n    \"code\": \"UNIPIN10\"\n}"
 				},
 				"url": {
 					"raw": "http://localhost:3001/api/promo/validate",
@@ -65,7 +135,7 @@
 			"response": []
 		},
 		{
-			"name": "Create & Pay Order",
+			"name": "Create & Pay Order (ABA)",
 			"request": {
 				"method": "POST",
 				"header": [
@@ -76,7 +146,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"gameCode\": \"MLBB\",\n    \"playerId\": \"12345\",\n    \"amount\": 100\n}"
+					"raw": "{\n    \"gameCode\": \"MLBB\",\n    \"playerId\": \"12345678\",\n    \"zoneId\": \"2001\",\n    \"packageId\": \"DIA_50\",\n    \"amount\": 50,\n    \"basePrice\": 0.99,\n    \"discountPercentage\": 10,\n    \"finalPrice\": 0.89,\n    \"paymentMethod\": \"ABA\"\n}"
 				},
 				"url": {
 					"raw": "http://localhost:3001/api/order/pay",
@@ -89,6 +159,56 @@
 						"api",
 						"order",
 						"pay"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create & Pay Order (ACLEDA)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"gameCode\": \"PUBG\",\n    \"playerId\": \"5522113344\",\n    \"zoneId\": \"\",\n    \"packageId\": \"PKG_300\",\n    \"amount\": 300,\n    \"basePrice\": 4.99,\n    \"discountPercentage\": 0,\n    \"finalPrice\": 4.99,\n    \"paymentMethod\": \"ACLEDA\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:3001/api/order/pay",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3001",
+					"path": [
+						"api",
+						"order",
+						"pay"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Order History",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:3001/api/history",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3001",
+					"path": [
+						"api",
+						"history"
 					]
 				}
 			},
