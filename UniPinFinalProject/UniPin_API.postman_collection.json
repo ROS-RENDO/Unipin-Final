@@ -1,98 +1,156 @@
 {
-	"info": {
-		"_postman_id": "b1e5d7a6-2b4f-4e4b-9c3a-2f4b4b4b4b4b",
-		"name": "UniPin Final Project API",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-	},
-	"item": [
-		{
-			"name": "Verify Player",
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n    \"gameCode\": \"MLBB\",\n    \"playerId\": \"12345\",\n    \"zoneId\": \"123\"\n}"
-				},
-				"url": {
-					"raw": "http://localhost:3001/api/verify",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "3001",
-					"path": [
-						"api",
-						"verify"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Validate Promo Code",
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n    \"code\": \"DISCOUNT10\"\n}"
-				},
-				"url": {
-					"raw": "http://localhost:3001/api/promo/validate",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "3001",
-					"path": [
-						"api",
-						"promo",
-						"validate"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Create & Pay Order",
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n    \"gameCode\": \"MLBB\",\n    \"playerId\": \"12345\",\n    \"amount\": 100\n}"
-				},
-				"url": {
-					"raw": "http://localhost:3001/api/order/pay",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "3001",
-					"path": [
-						"api",
-						"order",
-						"pay"
-					]
-				}
-			},
-			"response": []
-		}
-	]
+  "info": {
+    "_postman_id": "7b9a602b-1a0c-47e4-b245-3895eb1db7fd",
+    "name": "Unipin Full API Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Verify Player",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"gameCode\": \"MLBB\",\n    \"playerId\": \"12345\",\n    \"zoneId\": \"123\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3001/api/verify",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "verify"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Validate Promo Code",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"code\": \"UNIPIN10\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3001/api/promo/validate",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "promo", "validate"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create & Pay Order",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"gameCode\": \"MLBB\",\n    \"playerId\": \"12345\",\n    \"zoneId\": \"6789\",\n    \"packageId\": \"DIA_100\",\n    \"amount\": 100,\n    \"basePrice\": 0.99,\n    \"paymentMethod\": \"ABA\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3001/api/order/pay",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "order", "pay"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get All Games",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3001/api/games",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "games"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Single Game",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3001/api/games/MLBB",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "games", "MLBB"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Test IDs",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3001/api/test-ids/MLBB",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "test-ids", "MLBB"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Servers",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3001/api/servers/MLBB",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "servers", "MLBB"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Transaction History",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3001/api/history",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "history"]
+        }
+      },
+      "response": []
+    }
+  ]
 }

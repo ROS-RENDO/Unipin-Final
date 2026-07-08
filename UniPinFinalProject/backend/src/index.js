@@ -38,6 +38,9 @@ const { OrderBuilder }      = require('./patterns/OrderBuilder');       // CREAT
 const { ABAPayFactory, ACLEDAPayFactory, PaymentProcessor } = require('./patterns/PaymentStrategy'); // CREATIONAL: Abstract Factory + BEHAVIORAL: Strategy
 const { TopUpOrder }        = require('./patterns/OrderState');         // BEHAVIORAL: State
 const { PublisherFacade }   = require('./patterns/PublisherFacade');    // STRUCTURAL: Facade
+const { GuestUser, RegisteredUser } = require('./patterns/Users');      // Classes from Diagram
+
+const pool = require('./db');
 
 // ── Initialize Singletons & Instances ──
 const catalog  = GameCatalog.getInstance();   // Singleton — one global catalog
@@ -53,9 +56,6 @@ const ABA_CONFIG = {
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-// In-memory order store (demo)
-const orders = {};
 
 // ────────────────────────────────────────────────────────────────────────────
 // ROOT
@@ -164,8 +164,12 @@ app.post('/api/order/pay', async (req, res) => {
     const { gameCode, playerId, zoneId, packageId, amount, basePrice, discountPercentage, finalPrice, paymentMethod } = req.body;
 
     try {
-        // ── BUILDER PATTERN: Construct the order step-by-step ──
-        const builtOrder = new OrderBuilder()
+        // Instantiate User (just for demonstration as per class diagram)
+        const user = new GuestUser(req.ip, 'session_' + Date.now());
+        user.checkout();
+
+        // ── BUILDER PATTERN: Construct the order step-by-step using Singleton ──
+        const builtOrder = OrderBuilder.getInstance()
             .setGameCode(gameCode)
             .setPlayer(playerId, zoneId || '')
             .setPackage(packageId, amount, basePrice || finalPrice)
@@ -173,8 +177,8 @@ app.post('/api/order/pay', async (req, res) => {
             .build();
 
         // ── STATE PATTERN: Create order with state lifecycle ──
-        const order = new TopUpOrder(builtOrder.orderId, gameCode, playerId, amount);
-        orders[order.id] = order;
+        const order = new TopUpOrder(builtOrder.orderId, gameCode, playerId, zoneId || '', packageId, amount, builtOrder.getFinalPrice());
+        await order.save();
 
         // ── ABSTRACT FACTORY PATTERN: Select the right factory ──
         const factory = paymentMethod === 'ABA' ? new ABAPayFactory() : new ACLEDAPayFactory();
@@ -188,11 +192,11 @@ app.post('/api/order/pay', async (req, res) => {
         const paymentResult = processor.processPayment(builtOrder.getFinalPrice());
 
         // ── STATE PATTERN: Transition Pending → Paid ──
-        order.addTransaction(paymentMethod, builtOrder.getFinalPrice(), paymentResult.success ? 'Success' : 'Failed');
-        order.pay();
+        await order.addTransaction(paymentMethod, builtOrder.getFinalPrice(), paymentResult.success ? 'Success' : 'Failed');
+        await order.pay();
 
         if (!paymentResult.success) {
-            order.deliver(false); // Transition to Failed
+            await order.deliver(false); // Transition to Failed
             return res.status(402).json({ success: false, error: 'Payment declined by gateway', state: order.getStatus() });
         }
 
@@ -200,7 +204,7 @@ app.post('/api/order/pay', async (req, res) => {
         const delivery = await facade.deliverCurrency(gameCode, playerId, order.id, amount);
 
         // ── STATE PATTERN: Transition Paid → Completed or Failed ──
-        order.deliver(delivery.success);
+        await order.deliver(delivery.success);
 
         // ── ABSTRACT FACTORY: Generate receipt ──
         const receipt = receiptGenerator.generate(builtOrder, paymentResult);
@@ -234,16 +238,31 @@ app.post('/api/order/pay', async (req, res) => {
 // ────────────────────────────────────────────────────────────────────────────
 
 // GET /api/history — returns all orders with their state
-app.get('/api/history', (req, res) => {
-    const formattedOrders = Object.values(orders).map(order => ({
-        id:           order.id,
-        gameCode:     order.gameCode,
-        playerId:     order.playerId,
-        amount:       order.amount,
-        state:        order.getStatus(),
-        transactions: order.transactions,
-    }));
-    res.json({ success: true, orders: formattedOrders });
+app.get('/api/history', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT o.order_id as id, o.game_code as "gameCode", o.player_id as "playerId", o.amount, o.status as state,
+            COALESCE(
+                json_agg(
+                    json_build_object(
+                        'transactionId', t.transaction_id, 
+                        'paymentMethod', t.payment_method, 
+                        'amount', t.amount, 
+                        'status', t.status,
+                        'timestamp', t.created_at
+                    )
+                ) FILTER (WHERE t.transaction_id IS NOT NULL), '[]'
+            ) as transactions
+            FROM orders o
+            LEFT JOIN transactions t ON o.order_id = t.order_id
+            GROUP BY o.order_id
+            ORDER BY o.created_at DESC
+        `);
+        res.json({ success: true, orders: result.rows });
+    } catch(err) {
+        console.error('[API] /history DB Error:', err.message);
+        res.status(500).json({ success: false, error: 'Database error' });
+    }
 });
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -277,13 +296,16 @@ app.get('/api/logs/stream', (req, res) => {
 // START SERVER
 // ────────────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-    console.log(`\n🚀 UniPin Backend running on http://localhost:${PORT}`);
-    console.log(`📦 Design Patterns Active:`);
-    console.log(`   ✅ Singleton    — GameCatalog (${catalog.getAllGames().length} games loaded)`);
-    console.log(`   ✅ Builder      — OrderBuilder`);
-    console.log(`   ✅ Abs. Factory — ABAPayFactory, ACLEDAPayFactory`);
-    console.log(`   ✅ Strategy     — ABAPayStrategy, ACLEDAPayStrategy`);
-    console.log(`   ✅ State        — PendingState → PaidState → CompletedState/FailedState`);
-    console.log(`   ✅ Facade       — PublisherFacade (8 publishers)`);
+
+catalog.init().then(() => {
+    app.listen(PORT, () => {
+        console.log(`\n🚀 UniPin Backend running on http://localhost:${PORT}`);
+        console.log(`📦 Design Patterns Active:`);
+        console.log(`   ✅ Singleton    — GameCatalog (${catalog.getAllGames().length} games loaded)`);
+        console.log(`   ✅ Builder      — OrderBuilder`);
+        console.log(`   ✅ Abs. Factory — ABAPayFactory, ACLEDAPayFactory`);
+        console.log(`   ✅ Strategy     — ABAPayStrategy, ACLEDAPayStrategy`);
+        console.log(`   ✅ State        — PendingState → PaidState → CompletedState/FailedState`);
+        console.log(`   ✅ Facade       — PublisherFacade (8 publishers)`);
+    });
 });

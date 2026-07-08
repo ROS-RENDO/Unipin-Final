@@ -35,7 +35,17 @@ class BuiltOrder {
 
 class OrderBuilder {
     constructor() {
+        if (OrderBuilder._instance) {
+            throw new Error('OrderBuilder is a Singleton — use OrderBuilder.getInstance()');
+        }
         this._order = new BuiltOrder();
+    }
+
+    static getInstance() {
+        if (!OrderBuilder._instance) {
+            OrderBuilder._instance = new OrderBuilder();
+        }
+        return OrderBuilder._instance;
     }
 
     // Step 1: set which game
@@ -65,14 +75,19 @@ class OrderBuilder {
         return this;
     }
 
-    // Finalize — returns the constructed order object
+    // Finalize — returns the constructed order object and resets the builder
     build() {
         if (!this._order.gameCode) throw new Error('[Builder] gameCode is required');
         if (!this._order.playerId) throw new Error('[Builder] playerId is required');
         if (!this._order.packageId) throw new Error('[Builder] package must be set');
         console.log(`[Builder] Order built: ${this._order.orderId} for ${this._order.gameCode}`);
-        return this._order;
+        
+        const finishedOrder = this._order;
+        this._order = new BuiltOrder(); // Reset for next build
+        return finishedOrder;
     }
 }
+
+OrderBuilder._instance = null;
 
 module.exports = { OrderBuilder, BuiltOrder };

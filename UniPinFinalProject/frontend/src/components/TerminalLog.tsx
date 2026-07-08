@@ -46,6 +46,8 @@ export default function TerminalLog() {
   const [logs, setLogs] = useState<LogLine[]>([]);
   const [connected, setConnected] = useState(false);
   const [minimized, setMinimized] = useState(false);
+  const [closed, setClosed] = useState(false);
+  const [side, setSide] = useState<'right' | 'left'>('right');
   
   // Dragging state
   const [position, setPosition] = useState({ x: window.innerWidth - 520, y: window.innerHeight - 340 });
@@ -120,6 +122,66 @@ export default function TerminalLog() {
 
   const clear = () => setLogs([]);
 
+  if (closed) {
+    return (
+      <div 
+        style={{
+          position: 'fixed',
+          bottom: '40px',
+          [side]: 0,
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: side === 'right' ? 'row' : 'row-reverse',
+          alignItems: 'center',
+          gap: '2px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+        }}
+      >
+        <button
+          onClick={() => setClosed(false)}
+          title="Open Terminal"
+          style={{
+            background: '#0f172a',
+            color: '#22c55e',
+            border: '1px solid #1e293b',
+            borderRight: side === 'right' ? 'none' : '1px solid #1e293b',
+            borderLeft: side === 'left' ? 'none' : '1px solid #1e293b',
+            padding: '12px 10px',
+            cursor: 'pointer',
+            fontSize: '1.2rem',
+            borderTopLeftRadius: side === 'right' ? '8px' : 0,
+            borderBottomLeftRadius: side === 'right' ? '8px' : 0,
+            borderTopRightRadius: side === 'left' ? '8px' : 0,
+            borderBottomRightRadius: side === 'left' ? '8px' : 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {side === 'right' ? '◀' : '▶'}
+        </button>
+        <button
+          onClick={() => setSide(s => s === 'right' ? 'left' : 'right')}
+          title="Switch side"
+          style={{
+            background: '#1e293b',
+            color: '#94a3b8',
+            border: '1px solid #0f172a',
+            padding: '12px 6px',
+            cursor: 'pointer',
+            fontSize: '0.8rem',
+            borderTopLeftRadius: side === 'left' ? '8px' : 0,
+            borderBottomLeftRadius: side === 'left' ? '8px' : 0,
+            borderTopRightRadius: side === 'right' ? '8px' : 0,
+            borderBottomRightRadius: side === 'right' ? '8px' : 0,
+          }}
+        >
+          {side === 'right' ? '«' : '»'}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div 
       style={{
@@ -156,15 +218,27 @@ export default function TerminalLog() {
       >
         {/* Window controls */}
         <div style={{ display: 'flex', gap: '6px' }}>
+          {/* Close (Red) */}
           <span 
-            onClick={() => setMinimized(false)}
+            onClick={() => setClosed(true)}
+            onPointerDown={e => e.stopPropagation()}
             style={{ width: 12, height: 12, borderRadius: '50%', background: '#ef4444', display: 'inline-block', cursor: 'pointer' }} 
+            title="Close"
           />
+          {/* Minimize (Yellow) */}
           <span 
             onClick={() => setMinimized(true)}
+            onPointerDown={e => e.stopPropagation()}
             style={{ width: 12, height: 12, borderRadius: '50%', background: '#f59e0b', display: 'inline-block', cursor: 'pointer' }} 
+            title="Minimize"
           />
-          <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+          {/* Restore/Maximize (Green) */}
+          <span 
+            onClick={() => setMinimized(false)}
+            onPointerDown={e => e.stopPropagation()}
+            style={{ width: 12, height: 12, borderRadius: '50%', background: '#22c55e', display: 'inline-block', cursor: 'pointer' }} 
+            title="Restore"
+          />
         </div>
 
         <span style={{ color: '#64748b', fontSize: '0.78rem', flex: 1, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
