@@ -45,13 +45,8 @@ let lineId = 0;
 export default function TerminalLog() {
   const [logs, setLogs] = useState<LogLine[]>([]);
   const [connected, setConnected] = useState(false);
-  const [minimized, setMinimized] = useState(false);
-  
-  // Dragging state
-  const [position, setPosition] = useState({ x: window.innerWidth - 520, y: window.innerHeight - 340 });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartPos = useRef({ x: 0, y: 0 });
-  const windowStartPos = useRef({ x: 0, y: 0 });
+  const [isOpen, setIsOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   
   const bottomRef = useRef<HTMLDivElement>(null);
   const esRef = useRef<EventSource | null>(null);
@@ -66,134 +61,137 @@ export default function TerminalLog() {
       try {
         const { message, ts } = JSON.parse(e.data);
         setLogs(prev => [...prev.slice(-200), { message, ts, id: ++lineId }]);
+        
+        // Increase unread count if sidebar is closed
+        setUnreadCount(prev => isOpen ? 0 : prev + 1);
       } catch (_) {}
     };
 
     es.onerror = () => setConnected(false);
 
-    // Handle window resize to keep it on screen
-    const handleResize = () => {
-      setPosition(p => ({
-        x: Math.min(p.x, window.innerWidth - 100),
-        y: Math.min(p.y, window.innerHeight - 50)
-      }));
-    };
-    window.addEventListener('resize', handleResize);
-
     return () => { 
       es.close(); 
-      window.removeEventListener('resize', handleResize);
     };
-  }, []);
+  }, [isOpen]);
 
   useEffect(() => {
-    if (!minimized) {
+    if (isOpen) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      setUnreadCount(0); // clear unread when opened
     }
-  }, [logs, minimized]);
-
-  // Drag handlers
-  const handlePointerDown = (e: React.PointerEvent) => {
-    setIsDragging(true);
-    dragStartPos.current = { x: e.clientX, y: e.clientY };
-    windowStartPos.current = { ...position };
-    // Prevent text selection while dragging
-    e.currentTarget.setPointerCapture(e.pointerId);
-  };
-
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDragging) return;
-    const dx = e.clientX - dragStartPos.current.x;
-    const dy = e.clientY - dragStartPos.current.y;
-    
-    // Clamp to screen bounds
-    const newX = Math.max(0, Math.min(window.innerWidth - 300, windowStartPos.current.x + dx));
-    const newY = Math.max(0, Math.min(window.innerHeight - 40, windowStartPos.current.y + dy));
-    
-    setPosition({ x: newX, y: newY });
-  };
-
-  const handlePointerUp = (e: React.PointerEvent) => {
-    setIsDragging(false);
-    e.currentTarget.releasePointerCapture(e.pointerId);
-  };
+  }, [logs, isOpen]);
 
   const clear = () => setLogs([]);
 
   return (
-    <div 
-      style={{
-        position: 'fixed', 
-        left: position.x,
-        top: position.y,
-        zIndex: 9999,
-        fontFamily: "'JetBrains Mono', 'Fira Code', 'Courier New', monospace",
-        width: minimized ? '350px' : '500px',
-        boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
-        borderRadius: '8px',
-        overflow: 'hidden',
-        border: '1px solid #1e293b',
-        opacity: isDragging ? 0.9 : 1,
-        transition: isDragging ? 'none' : 'width 0.2s',
-      }}
-    >
-      {/* Title bar (Draggable Area) */}
-      <div
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
+    <>
+      {/* Floating Toggle Icon */}
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
         style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          zIndex: 10000,
           background: '#0f172a',
-          padding: '0.6rem 1rem',
+          color: '#e2e8f0',
+          border: '1px solid #1e293b',
+          borderRadius: '50%',
+          width: '56px',
+          height: '56px',
           display: 'flex',
           alignItems: 'center',
-          gap: '0.75rem',
-          cursor: isDragging ? 'grabbing' : 'grab',
-          userSelect: 'none',
-          touchAction: 'none' // Prevent scrolling while dragging on touch
+          justifyContent: 'center',
+          fontSize: '1.5rem',
+          cursor: 'pointer',
+          boxShadow: '0 4px 15px rgba(0,0,0,0.4)',
+          transition: 'transform 0.2s, background 0.2s',
+          outline: 'none',
+        }}
+        onMouseOver={(e) => e.currentTarget.style.background = '#1e293b'}
+        onMouseOut={(e) => e.currentTarget.style.background = '#0f172a'}
+        onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+        onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+      >
+        🧑‍💻
+        {unreadCount > 0 && (
+          <span style={{
+            position: 'absolute',
+            top: '-5px',
+            right: '-5px',
+            background: '#ef4444',
+            color: 'white',
+            fontSize: '0.7rem',
+            fontWeight: 'bold',
+            padding: '2px 6px',
+            borderRadius: '10px',
+            border: '2px solid #0f172a'
+          }}>
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {/* Sidebar */}
+      <div 
+        style={{
+          position: 'fixed', 
+          right: isOpen ? '0' : '-450px', // slide out of view
+          top: 0,
+          height: '100vh',
+          width: '450px',
+          zIndex: 9999,
+          fontFamily: "'JetBrains Mono', 'Fira Code', 'Courier New', monospace",
+          background: '#020617', // Very dark blue/black
+          boxShadow: '-10px 0 40px rgba(0,0,0,0.5)',
+          borderLeft: '1px solid #1e293b',
+          transition: 'right 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          display: 'flex',
+          flexDirection: 'column'
         }}
       >
-        {/* Window controls */}
-        <div style={{ display: 'flex', gap: '6px' }}>
-          <span 
-            onClick={() => setMinimized(false)}
-            style={{ width: 12, height: 12, borderRadius: '50%', background: '#ef4444', display: 'inline-block', cursor: 'pointer' }} 
-          />
-          <span 
-            onClick={() => setMinimized(true)}
-            style={{ width: 12, height: 12, borderRadius: '50%', background: '#f59e0b', display: 'inline-block', cursor: 'pointer' }} 
-          />
-          <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+        {/* Title bar */}
+        <div
+          style={{
+            background: '#0f172a',
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem',
+            borderBottom: '1px solid #1e293b',
+          }}
+        >
+          <span style={{ color: '#94a3b8', fontSize: '0.9rem', flex: 1, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            ⚙️ Backend Terminal
+            <span style={{ color: connected ? '#22c55e' : '#ef4444', fontSize: '1.2rem', lineHeight: 0.5 }} title={connected ? "Connected to SSE" : "Disconnected"}>•</span>
+          </span>
+
+          <button
+            onClick={clear}
+            style={{ background: 'none', border: '1px solid #334155', borderRadius: '4px', color: '#94a3b8', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', transition: 'background 0.2s' }}
+            onMouseOver={(e) => e.currentTarget.style.background = '#1e293b'}
+            onMouseOut={(e) => e.currentTarget.style.background = 'none'}
+          >
+            Clear
+          </button>
+          
+          <button
+            onClick={() => setIsOpen(false)}
+            style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '1.2rem', cursor: 'pointer', padding: '0 0.5rem' }}
+          >
+            ✕
+          </button>
         </div>
 
-        <span style={{ color: '#64748b', fontSize: '0.78rem', flex: 1, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          ⚙️ Backend Terminal
-          <span style={{ color: connected ? '#22c55e' : '#ef4444', fontSize: '1.2rem', lineHeight: 0.5 }}>•</span>
-        </span>
-
-        <button
-          onClick={(e) => { e.stopPropagation(); clear(); }}
-          style={{ background: 'none', border: '1px solid #334155', borderRadius: '4px', color: '#64748b', padding: '0.15rem 0.6rem', fontSize: '0.72rem', cursor: 'pointer', zIndex: 10 }}
-          onPointerDown={e => e.stopPropagation()} // don't start dragging if clicking clear
-        >
-          Clear
-        </button>
-      </div>
-
-      {/* Log body */}
-      {!minimized && (
+        {/* Log body */}
         <div style={{
-          background: 'rgba(2, 6, 23, 0.95)',
-          backdropFilter: 'blur(12px)',
-          height: '280px',
+          flex: 1,
           overflowY: 'auto',
-          padding: '0.5rem 1rem',
-          borderTop: '1px solid rgba(255,255,255,0.05)',
+          padding: '1rem',
         }}>
           {logs.length === 0 && (
-            <div style={{ color: '#334155', fontSize: '0.8rem', paddingTop: '0.5rem', textAlign: 'center' }}>
-              Waiting for backend events...
+            <div style={{ color: '#475569', fontSize: '0.85rem', paddingTop: '1rem', textAlign: 'center', fontStyle: 'italic' }}>
+              Listening to backend events...
             </div>
           )}
           {logs.map(line => {
@@ -201,16 +199,16 @@ export default function TerminalLog() {
             const color = getLineColor(line.message);
             const time = new Date(line.ts).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
             return (
-              <div key={line.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', marginBottom: '0.4rem', fontSize: '0.75rem', lineHeight: 1.4 }}>
+              <div key={line.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.8rem', marginBottom: '0.6rem', fontSize: '0.8rem', lineHeight: 1.5 }}>
                 {/* Timestamp */}
-                <span style={{ color: '#475569', flexShrink: 0, minWidth: '4.5rem' }}>{time}</span>
+                <span style={{ color: '#475569', flexShrink: 0 }}>{time}</span>
                 {/* Pattern tag badge */}
                 {tag ? (
-                  <span style={{ background: TAG_BG[tag] || '#ffffff10', color, border: `1px solid ${color}44`, borderRadius: '4px', padding: '0 0.4rem', fontSize: '0.65rem', fontWeight: 700, flexShrink: 0, minWidth: '5.5rem', textAlign: 'center' }}>
+                  <span style={{ background: TAG_BG[tag] || '#ffffff10', color, border: `1px solid ${color}44`, borderRadius: '4px', padding: '0.1rem 0.5rem', fontSize: '0.7rem', fontWeight: 700, flexShrink: 0, minWidth: '6rem', textAlign: 'center' }}>
                     {tag}
                   </span>
                 ) : (
-                  <span style={{ minWidth: '5.5rem', flexShrink: 0 }} />
+                  <span style={{ minWidth: '6rem', flexShrink: 0 }} />
                 )}
                 {/* Message */}
                 <span style={{ color, wordBreak: 'break-word', flex: 1, fontFamily: "'JetBrains Mono', 'Fira Code', 'Courier New', monospace" }}>
@@ -221,7 +219,7 @@ export default function TerminalLog() {
           })}
           <div ref={bottomRef} />
         </div>
-      )}
-    </div>
+      </div>
+    </>
   );
 }
