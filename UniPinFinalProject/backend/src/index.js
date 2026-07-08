@@ -42,6 +42,7 @@ const { PublisherFacade }   = require('./patterns/PublisherFacade');    // STRUC
 // ── Initialize Singletons & Instances ──
 const catalog  = GameCatalog.getInstance();   // Singleton — one global catalog
 const facade   = new PublisherFacade();        // Facade — gateway to all publishers
+const db       = require('./db');              // Postgres DB Connection
 
 // ── ABA Config from .env ──
 const ABA_CONFIG = {
@@ -54,8 +55,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// In-memory order store (demo)
-const orders = {};
+// In-memory order store (demo) removed since we use PostgreSQL now.
+// const orders = {};
 
 // ────────────────────────────────────────────────────────────────────────────
 // ROOT
@@ -110,11 +111,12 @@ app.post('/api/verify', async (req, res) => {
         if (result.isValid) {
             res.json({ success: true, isValid: true, username: result.username });
         } else {
-            // Demo fallback: accept any 4+ char ID
-            res.json({ success: true, isValid: true, username: `Player_${String(playerId).trim().slice(-4)}` });
+            console.error(`[Verify Error] Game: ${gameCode}, Player: ${playerId}, Zone: ${zoneId || 'N/A'} - ${result.error}`);
+            res.json({ success: false, isValid: false, error: result.error || 'Player not found in publisher database' });
         }
     } catch (err) {
-        res.json({ success: true, isValid: true, username: `Player_${String(playerId).trim().slice(-4)}` });
+        console.error(`[Verify Exception]`, err);
+        res.status(500).json({ success: false, isValid: false, error: 'Internal server error during verification' });
     }
 });
 
@@ -163,6 +165,13 @@ app.get('/api/payment/aba-config', (req, res) => {
 app.post('/api/order/pay', async (req, res) => {
     const { gameCode, playerId, zoneId, packageId, amount, basePrice, discountPercentage, finalPrice, paymentMethod } = req.body;
 
+    // Strict validation before taking money!
+    const verifyResult = await facade.validatePlayer(gameCode, String(playerId).trim(), zoneId || '');
+    if (!verifyResult.isValid) {
+        console.error(`[Checkout Verify Error] Game: ${gameCode}, Player: ${playerId}, Zone: ${zoneId || 'N/A'} - ${verifyResult.error}`);
+        return res.status(400).json({ success: false, error: verifyResult.error || 'Player ID not found. Cannot proceed with order.' });
+    }
+
     try {
         // ── BUILDER PATTERN: Construct the order step-by-step ──
         const builtOrder = new OrderBuilder()
@@ -174,7 +183,12 @@ app.post('/api/order/pay', async (req, res) => {
 
         // ── STATE PATTERN: Create order with state lifecycle ──
         const order = new TopUpOrder(builtOrder.orderId, gameCode, playerId, amount);
-        orders[order.id] = order;
+        
+        // Save to DB initially (Pending state)
+        await db.query(
+            'INSERT INTO orders (id, game_code, player_id, zone_id, package_id, amount, base_price, discount_percentage, final_price, state) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
+            [order.id, gameCode, playerId, zoneId || null, packageId, amount, builtOrder.basePrice, builtOrder.discountPct, builtOrder.getFinalPrice(), order.getStatus()]
+        );
 
         // ── ABSTRACT FACTORY PATTERN: Select the right factory ──
         const factory = paymentMethod === 'ABA' ? new ABAPayFactory() : new ACLEDAPayFactory();
@@ -189,10 +203,18 @@ app.post('/api/order/pay', async (req, res) => {
 
         // ── STATE PATTERN: Transition Pending → Paid ──
         order.addTransaction(paymentMethod, builtOrder.getFinalPrice(), paymentResult.success ? 'Success' : 'Failed');
+        const newTxn = order.transactions[order.transactions.length - 1];
+        await db.query(
+            'INSERT INTO transactions (id, order_id, payment_method, amount, status) VALUES ($1, $2, $3, $4, $5)',
+            [newTxn.transactionId, order.id, paymentMethod, builtOrder.getFinalPrice(), paymentResult.success ? 'Success' : 'Failed']
+        );
+
         order.pay();
+        await db.query('UPDATE orders SET state = $1 WHERE id = $2', [order.getStatus(), order.id]);
 
         if (!paymentResult.success) {
             order.deliver(false); // Transition to Failed
+            await db.query('UPDATE orders SET state = $1 WHERE id = $2', [order.getStatus(), order.id]);
             return res.status(402).json({ success: false, error: 'Payment declined by gateway', state: order.getStatus() });
         }
 
@@ -201,6 +223,7 @@ app.post('/api/order/pay', async (req, res) => {
 
         // ── STATE PATTERN: Transition Paid → Completed or Failed ──
         order.deliver(delivery.success);
+        await db.query('UPDATE orders SET state = $1 WHERE id = $2', [order.getStatus(), order.id]);
 
         // ── ABSTRACT FACTORY: Generate receipt ──
         const receipt = receiptGenerator.generate(builtOrder, paymentResult);
@@ -234,16 +257,31 @@ app.post('/api/order/pay', async (req, res) => {
 // ────────────────────────────────────────────────────────────────────────────
 
 // GET /api/history — returns all orders with their state
-app.get('/api/history', (req, res) => {
-    const formattedOrders = Object.values(orders).map(order => ({
-        id:           order.id,
-        gameCode:     order.gameCode,
-        playerId:     order.playerId,
-        amount:       order.amount,
-        state:        order.getStatus(),
-        transactions: order.transactions,
-    }));
-    res.json({ success: true, orders: formattedOrders });
+app.get('/api/history', async (req, res) => {
+    try {
+        const ordersRes = await db.query('SELECT * FROM orders ORDER BY created_at DESC');
+        const txnsRes = await db.query('SELECT * FROM transactions');
+        
+        const formattedOrders = ordersRes.rows.map(row => {
+            return {
+                id: row.id,
+                gameCode: row.game_code,
+                playerId: row.player_id,
+                amount: row.amount,
+                state: row.state,
+                transactions: txnsRes.rows.filter(t => t.order_id === row.id).map(t => ({
+                    transactionId: t.id,
+                    paymentMethod: t.payment_method,
+                    amount: t.amount,
+                    status: t.status
+                }))
+            };
+        });
+        res.json({ success: true, orders: formattedOrders });
+    } catch (error) {
+        console.error('[History DB Error]', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
 });
 
 // ────────────────────────────────────────────────────────────────────────────

@@ -16,12 +16,13 @@ class GamePublisherAPI {
 // ── Concrete Publisher: Moonton (MLBB) ──
 class MoontonAPI extends GamePublisherAPI {
     getServerList()                { return [{ server_id: '2001', server_name: 'Asia' }, { server_id: '1001', server_name: 'SEA' }]; }
-    verify(playerId, zoneId)       { return this._mockVerify(playerId, zoneId, { '12345678': 'MLBB_Ros_Rendo', '87654321': 'MLBB_ProGamer' }); }
+    verify(playerId, zoneId)       { return this._mockVerify(playerId, zoneId, { '12345678_2001': 'MLBB_Ros_Rendo', '87654321_1001': 'MLBB_ProGamer' }); }
     checkout(orderId, amount)      { return { providerTxn_id: `MOONTON-${orderId}` }; }
     deliver(orderId, amount)       { return { success: Math.random() > 0.05, deliveredAt: new Date() }; }
     _mockVerify(playerId, zoneId, db) {
-        const username = db[playerId];
-        return username ? { isValid: true, username } : { isValid: false };
+        if (!zoneId) return { isValid: false, error: 'Zone ID is required for Mobile Legends' };
+        const username = db[`${playerId}_${zoneId}`];
+        return username ? { isValid: true, username } : { isValid: false, error: 'Player ID and Zone ID combination not found' };
     }
 }
 
@@ -37,9 +38,10 @@ class TencentAPI extends GamePublisherAPI {
 class HoYoverseAPI extends GamePublisherAPI {
     getServerList()                { return [{ server_id: 'os_asia', server_name: 'Asia' }, { server_id: 'prod_official_asia', server_name: 'Asia Official' }]; }
     verify(playerId, zoneId) {
-        const db = { '700123456': 'Genshin_Traveler', '800654321': 'Honkai_Trailblazer' };
-        const username = db[playerId];
-        return username ? { isValid: true, username } : { isValid: false };
+        if (!zoneId) return { isValid: false, error: 'Server selection is required' };
+        const db = { '700123456_os_asia': 'Genshin_Traveler', '800654321_prod_official_asia': 'Honkai_Trailblazer' };
+        const username = db[`${playerId}_${zoneId}`];
+        return username ? { isValid: true, username } : { isValid: false, error: 'Player not found on this server' };
     }
     checkout(orderId, amount)      { return { providerTxn_id: `HOYO-${orderId}` }; }
     deliver(orderId, amount)       { return { success: Math.random() > 0.05, deliveredAt: new Date() }; }
@@ -98,13 +100,8 @@ class PublisherFacade {
                     return;
                 }
 
-                // Demo fallback: accept any 4+ character player ID
-                if (playerId && playerId.trim().length >= 4) {
-                    resolve({ isValid: true, username: `Player_${playerId.trim().slice(-4)}` });
-                    return;
-                }
-
-                resolve({ isValid: false, error: 'Player ID must be at least 4 characters' });
+                // Return the precise error from the publisher API
+                resolve({ isValid: false, error: result.error || 'Player ID not found in publisher database.' });
             }, 500);
         });
     }
