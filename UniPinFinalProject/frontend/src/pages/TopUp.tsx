@@ -33,7 +33,7 @@ const TopUp = () => {
 
     // Payment state
     const [isPaying, setIsPaying] = useState(false);
-    const [receipt, setReceipt] = useState<string | null>(null);
+    const [receiptData, setReceiptData] = useState<any | null>(null);
 
     // Load test IDs for this game
     useEffect(() => {
@@ -140,17 +140,17 @@ const TopUp = () => {
                 });
                 const data = await res.json();
                 if (data.success) {
-                    setReceipt(
-                        `Transaction ID : ${data.transactionId}\n` +
-                        `Game           : ${game.name}\n` +
-                        `Player         : ${verifyResult.username}\n` +
-                        `Credits        : ${order.amount}\n` +
-                        `Base Price     : $${order.basePrice.toFixed(2)}\n` +
-                        (order.discountPercentage ? `Discount       : ${order.discountPercentage}%\n` : '') +
-                        `Final Paid     : $${order.getFinalPrice().toFixed(2)}\n` +
-                        `Payment Via    : ${paymentMethod} Pay\n` +
-                        `Status         : ${data.state}`
-                    );
+                    setReceiptData({
+                        transactionId: data.transactionId,
+                        gameName: game.name,
+                        username: verifyResult.username,
+                        amount: order.amount,
+                        basePrice: order.basePrice,
+                        discountPercentage: order.discountPercentage,
+                        finalPrice: order.getFinalPrice(),
+                        paymentMethod: paymentMethod,
+                        state: data.state
+                    });
                 }
             } else {
                 alert('Payment failed at gateway.');
@@ -163,17 +163,69 @@ const TopUp = () => {
     };
 
     // ── Receipt screen ──
-    if (receipt) {
+    if (receiptData) {
         return (
-            <div className="max-w-xl mx-auto mt-20 p-10 bg-slate-900 border border-white/10 rounded-3xl shadow-2xl text-center space-y-6">
-                <div className="w-20 h-20 bg-green-500/20 text-green-400 rounded-full flex items-center justify-center mx-auto shadow-[0_0_50px_rgba(34,197,94,0.3)]">
-                    <CheckCircle2 className="w-10 h-10" />
+            <div className="max-w-md mx-auto mt-10">
+                {/* Glowing Success Header */}
+                <div className="relative bg-gradient-to-br from-green-500/20 to-emerald-900/40 p-8 rounded-t-3xl border border-green-500/30 text-center backdrop-blur-xl overflow-hidden">
+                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-green-500/20 blur-3xl rounded-full"></div>
+                    <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-600 text-white rounded-full flex items-center justify-center mx-auto shadow-[0_0_50px_rgba(52,211,153,0.5)] mb-4 transform scale-110">
+                        <CheckCircle2 className="w-10 h-10" />
+                    </div>
+                    <h2 className="text-3xl font-black text-white tracking-tight">Payment Successful!</h2>
+                    <p className="text-green-400/80 font-medium mt-2 text-sm uppercase tracking-widest">Order Confirmed</p>
                 </div>
-                <h2 className="text-3xl font-black text-white">Payment Successful!</h2>
-                <pre className="text-left bg-slate-950 p-6 rounded-2xl border border-white/5 text-sm font-mono text-green-300 overflow-x-auto whitespace-pre-wrap">{receipt}</pre>
-                <button onClick={() => navigate('/history')} className="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl transition-all">
-                    View Transaction History
-                </button>
+
+                {/* Receipt Details Body */}
+                <div className="bg-slate-900/90 backdrop-blur-xl border-x border-b border-white/10 rounded-b-3xl shadow-2xl relative">
+                    
+                    {/* Ticket notch effects */}
+                    <div className="absolute top-0 -left-3 w-6 h-6 bg-slate-950 rounded-full transform -translate-y-1/2 border-r border-white/10"></div>
+                    <div className="absolute top-0 -right-3 w-6 h-6 bg-slate-950 rounded-full transform -translate-y-1/2 border-l border-white/10"></div>
+                    
+                    {/* Dashed line */}
+                    <div className="border-t-2 border-dashed border-white/10 w-full absolute top-0 left-0"></div>
+
+                    <div className="p-8 space-y-4">
+                        <div className="flex justify-between items-center py-2 border-b border-white/5">
+                            <span className="text-slate-400 text-sm">Transaction ID</span>
+                            <span className="text-white font-mono text-sm">{receiptData.transactionId}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-2 border-b border-white/5">
+                            <span className="text-slate-400 text-sm">Game</span>
+                            <span className="text-white font-bold">{receiptData.gameName}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-2 border-b border-white/5">
+                            <span className="text-slate-400 text-sm">Player</span>
+                            <span className="text-white font-bold">{receiptData.username}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-2 border-b border-white/5">
+                            <span className="text-slate-400 text-sm">Credits Added</span>
+                            <span className="text-orange-400 font-black">{receiptData.amount} Credits</span>
+                        </div>
+                        <div className="flex justify-between items-center py-2 border-b border-white/5">
+                            <span className="text-slate-400 text-sm">Payment Method</span>
+                            <span className="text-white font-bold">{receiptData.paymentMethod} Pay</span>
+                        </div>
+                        
+                        <div className="pt-6 pb-2">
+                            <div className="flex justify-between items-end">
+                                <span className="text-slate-400 uppercase text-xs font-bold tracking-wider">Total Paid</span>
+                                <span className="text-4xl font-black text-white">${receiptData.finalPrice.toFixed(2)}</span>
+                            </div>
+                            {receiptData.discountPercentage > 0 && (
+                                <p className="text-right text-green-400 text-xs font-bold mt-1">Saved {receiptData.discountPercentage}% with Promo</p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Action Button */}
+                    <div className="p-6 pt-0">
+                        <button onClick={() => navigate('/history')} className="w-full py-4 bg-white hover:bg-slate-200 text-slate-900 font-black rounded-xl transition-all flex items-center justify-center gap-2 shadow-xl shadow-white/10">
+                            View Transaction History
+                        </button>
+                    </div>
+                </div>
             </div>
         );
     }
