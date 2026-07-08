@@ -7,12 +7,190 @@ import { ABAPayFactory, ACLEDAPayFactory } from '../patterns/PaymentGatewayFacto
 import { PaymentProcessor } from '../patterns/PaymentStrategy';
 import { CheckCircle2, AlertCircle, Loader2, ArrowLeft, Gamepad2, CreditCard, Ticket, Info, X } from 'lucide-react';
 
+// ── Receipt Data Types ──
+interface ReceiptData {
+    transactionId: string;
+    gameName: string;
+    gameImage?: string;
+    player: string;
+    credits: string;
+    basePrice: string;
+    discount?: string;
+    finalPrice: string;
+    paymentMethod: string;
+    status: string;
+    date: string;
+    delivery?: { providerTxnId: string; deliveredAt: string };
+}
+
+// ── Beautiful Receipt Component ──
+const ReceiptCard = ({ data, onNewTopUp }: {
+    data: ReceiptData;
+    onNewTopUp: () => void;
+}) => {
+    const now = new Date();
+    const dateStr = data.date || now.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+
+    return (
+        <div className="min-h-screen flex flex-col items-center justify-center py-12 px-4">
+            {/* Success Header */}
+            <div className="flex flex-col items-center mb-8 space-y-3 animate-[fadeInDown_0.5s_ease]">
+                <h2 className="text-3xl font-black text-white tracking-tight">Payment Successful!</h2>
+                <p className="text-slate-400 text-sm">Your top-up has been processed. Keep this receipt for your records.</p>
+            </div>
+
+            {/* ── Ticket Card ── */}
+            <div className="w-full max-w-sm" style={{ filter: 'drop-shadow(0 25px 60px rgba(249,115,22,0.25))' }}>
+
+                {/* ── TOP HALF — Header ── */}
+                <div className="relative rounded-t-3xl overflow-hidden"
+                    style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 40%, #7c3aed 100%)' }}>
+
+                    {/* Background pattern dots */}
+                    <div className="absolute inset-0 opacity-10"
+                        style={{
+                            backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
+                            backgroundSize: '20px 20px'
+                        }} />
+
+                    <div className="relative p-6 pb-8">
+                        {/* Transaction ID pill */}
+                        <div className="flex justify-between items-start mb-5">
+                            <div className="bg-white/15 backdrop-blur-sm rounded-full px-3 py-1 text-white/90 text-xs font-mono tracking-widest border border-white/20">
+                                #{data.transactionId?.slice(0, 16) || 'TXN-XXXXXXXX'}
+                            </div>
+                            <div className="bg-green-400/20 border border-green-400/40 rounded-full px-3 py-1 flex items-center gap-1.5">
+                                <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                                <span className="text-green-300 text-xs font-bold uppercase tracking-wider">{data.status}</span>
+                            </div>
+                        </div>
+
+                        {/* Game Info */}
+                        <div className="flex items-center gap-4">
+                            {data.gameImage ? (
+                                <img src={data.gameImage} alt={data.gameName}
+                                    className="w-16 h-16 rounded-2xl object-cover border-2 border-white/30 shadow-xl flex-shrink-0" />
+                            ) : (
+                                <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                                    <Gamepad2 className="w-8 h-8 text-white" />
+                                </div>
+                            )}
+                            <div>
+                                <p className="text-white/70 text-xs font-medium uppercase tracking-widest mb-0.5">Game</p>
+                                <h3 className="text-white text-2xl font-black leading-tight">{data.gameName}</h3>
+                                <div className="flex items-center gap-1.5 mt-1">
+                                    <Gamepad2 className="w-3.5 h-3.5 text-white/60" />
+                                    <span className="text-white/70 text-sm font-semibold">{data.credits} Credits</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+                {/* ── BOTTOM HALF — Details ── */}
+                <div className="bg-slate-900 rounded-b-3xl px-6 pt-6 pb-6">
+
+                    {/* Info Grid */}
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-5 mb-6">
+                        <div>
+                            <p className="text-slate-500 text-xs uppercase tracking-widest mb-1 font-medium">Player</p>
+                            <p className="text-white font-bold text-sm">{data.player}</p>
+                        </div>
+                        <div>
+                            <p className="text-slate-500 text-xs uppercase tracking-widest mb-1 font-medium">Credits</p>
+                            <p className="text-white font-bold text-sm">{data.credits}</p>
+                        </div>
+                        <div>
+                            <p className="text-slate-500 text-xs uppercase tracking-widest mb-1 font-medium">Base Price</p>
+                            <p className="text-white font-bold text-sm">{data.basePrice}</p>
+                        </div>
+                        {data.discount && (
+                            <div>
+                                <p className="text-slate-500 text-xs uppercase tracking-widest mb-1 font-medium">Discount</p>
+                                <p className="text-green-400 font-bold text-sm">-{data.discount}</p>
+                            </div>
+                        )}
+                        <div>
+                            <p className="text-slate-500 text-xs uppercase tracking-widest mb-1 font-medium">Payment Via</p>
+                            <div className="flex items-center gap-1.5">
+                                <CreditCard className="w-3.5 h-3.5 text-orange-400" />
+                                <p className="text-white font-bold text-sm">{data.paymentMethod}</p>
+                            </div>
+                        </div>
+                        <div>
+                            <p className="text-slate-500 text-xs uppercase tracking-widest mb-1 font-medium">Date</p>
+                            <p className="text-white font-bold text-xs">{dateStr}</p>
+                        </div>
+                    </div>
+
+                    {/* Total Line */}
+                    <div className="flex items-center justify-between bg-orange-500/10 border border-orange-500/20 rounded-2xl px-4 py-3 mb-5">
+                        <span className="text-slate-300 font-semibold text-sm">Total Paid</span>
+                        <span className="text-orange-400 font-black text-xl">{data.finalPrice}</span>
+                    </div>
+
+                    {/* QR / Barcode area */}
+                    <div className="flex items-center justify-between mb-5 px-2">
+                        <div className="text-left">
+                            <p className="text-slate-600 text-xs uppercase tracking-widest font-medium">Transaction</p>
+                            <p className="text-white font-mono text-xs mt-0.5 opacity-60">{data.transactionId?.slice(0, 20) || 'N/A'}</p>
+                        </div>
+                        {/* Decorative QR-like grid */}
+                        <div className="grid grid-cols-5 gap-0.5 opacity-40">
+                            {Array.from({ length: 25 }).map((_, i) => (
+                                <div key={i}
+                                    className="w-3 h-3 rounded-sm"
+                                    style={{ background: Math.random() > 0.4 ? '#f97316' : 'transparent' }}
+                                />
+                            ))}
+                        </div>
+                    </div>
+
+                    {data.delivery && (
+                        <div className="flex items-center justify-between bg-green-500/10 border border-green-500/20 rounded-2xl px-4 py-3 mb-5">
+                            <div>
+                                <span className="block text-green-400/70 text-xs font-semibold uppercase tracking-wider mb-0.5">Delivery Status</span>
+                                <span className="text-green-400 font-bold text-sm">Delivered via Provider</span>
+                            </div>
+                            <div className="text-right">
+                                <span className="block text-slate-500 text-[10px] uppercase tracking-wider mb-0.5">Provider TXN</span>
+                                <span className="text-slate-300 font-mono text-xs">{data.delivery.providerTxnId || 'N/A'}</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Watermark text */}
+                    <p className="text-center text-slate-700 text-xs uppercase tracking-[0.4em] font-black mb-4 select-none">
+                        · UniPin · Top-Up Receipt ·
+                    </p>
+                </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="w-full max-w-sm mt-6 space-y-3">
+                <button
+                    onClick={onNewTopUp}
+                    className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white font-semibold rounded-2xl transition-all flex items-center justify-center gap-2 text-sm"
+                >
+                    <ArrowLeft className="w-4 h-4" />
+                    Back to Home
+                </button>
+            </div>
+        </div>
+    );
+};
+
 interface TestId { playerId: string; zoneId: string; username: string; }
 
 const TopUp = () => {
     const { gameCode } = useParams<{ gameCode: string }>();
     const navigate = useNavigate();
     const game = GameCatalog.getGameByCode(gameCode || '');
+    
+    // Check if the current game requires a Zone/Server ID
+    const needsZoneId = ['MLBB', 'GENSHIN', 'HONKAI'].includes(gameCode?.toUpperCase() || '');
 
     // Form state
     const [playerId, setPlayerId] = useState('');
@@ -33,7 +211,7 @@ const TopUp = () => {
 
     // Payment state
     const [isPaying, setIsPaying] = useState(false);
-    const [receipt, setReceipt] = useState<string | null>(null);
+    const [receipt, setReceipt] = useState<ReceiptData | null>(null);
 
     // Load test IDs for this game
     useEffect(() => {
@@ -140,17 +318,20 @@ const TopUp = () => {
                 });
                 const data = await res.json();
                 if (data.success) {
-                    setReceipt(
-                        `Transaction ID : ${data.transactionId}\n` +
-                        `Game           : ${game.name}\n` +
-                        `Player         : ${verifyResult.username}\n` +
-                        `Credits        : ${order.amount}\n` +
-                        `Base Price     : $${order.basePrice.toFixed(2)}\n` +
-                        (order.discountPercentage ? `Discount       : ${order.discountPercentage}%\n` : '') +
-                        `Final Paid     : $${order.getFinalPrice().toFixed(2)}\n` +
-                        `Payment Via    : ${paymentMethod} Pay\n` +
-                        `Status         : ${data.state}`
-                    );
+                    setReceipt({
+                        transactionId: data.transactionId,
+                        gameName: game.name,
+                        gameImage: game.image,
+                        player: verifyResult.username || playerId.trim(),
+                        credits: String(order.amount),
+                        basePrice: `$${order.basePrice.toFixed(2)}`,
+                        discount: order.discountPercentage ? `${order.discountPercentage}%` : undefined,
+                        finalPrice: `$${order.getFinalPrice().toFixed(2)}`,
+                        paymentMethod: `${paymentMethod} Pay`,
+                        status: data.state || 'Completed',
+                        date: new Date().toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }),
+                        delivery: data.delivery
+                    });
                 }
             } else {
                 alert('Payment failed at gateway.');
@@ -165,16 +346,10 @@ const TopUp = () => {
     // ── Receipt screen ──
     if (receipt) {
         return (
-            <div className="max-w-xl mx-auto mt-20 p-10 bg-slate-900 border border-white/10 rounded-3xl shadow-2xl text-center space-y-6">
-                <div className="w-20 h-20 bg-green-500/20 text-green-400 rounded-full flex items-center justify-center mx-auto shadow-[0_0_50px_rgba(34,197,94,0.3)]">
-                    <CheckCircle2 className="w-10 h-10" />
-                </div>
-                <h2 className="text-3xl font-black text-white">Payment Successful!</h2>
-                <pre className="text-left bg-slate-950 p-6 rounded-2xl border border-white/5 text-sm font-mono text-green-300 overflow-x-auto whitespace-pre-wrap">{receipt}</pre>
-                <button onClick={() => navigate('/history')} className="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl transition-all">
-                    View Transaction History
-                </button>
-            </div>
+            <ReceiptCard
+                data={receipt}
+                onNewTopUp={() => navigate('/')}
+            />
         );
     }
 
@@ -231,7 +406,7 @@ const TopUp = () => {
                             <div className="w-10 h-10 rounded-full bg-orange-500/20 text-orange-500 flex items-center justify-center font-black">1</div>
                             <h2 className="text-xl font-bold">Player Identity</h2>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className={`grid grid-cols-1 gap-4 ${needsZoneId ? 'md:grid-cols-2' : ''}`}>
                             <div>
                                 <label className="block text-sm font-medium text-slate-400 mb-2">Player ID / UID</label>
                                 <input type="text"
@@ -241,15 +416,17 @@ const TopUp = () => {
                                     onChange={e => { setPlayerId(e.target.value); setVerifyResult(null); }}
                                 />
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">Zone ID (if required)</label>
-                                <input type="text"
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:border-orange-500 transition-all text-white placeholder-slate-600"
-                                    placeholder="Zone ID"
-                                    value={zoneId}
-                                    onChange={e => setZoneId(e.target.value)}
-                                />
-                            </div>
+                            {needsZoneId && (
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-400 mb-2">Zone ID / Server</label>
+                                    <input type="text"
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:border-orange-500 transition-all text-white placeholder-slate-600"
+                                        placeholder="Zone ID / Server"
+                                        value={zoneId}
+                                        onChange={e => setZoneId(e.target.value)}
+                                    />
+                                </div>
+                            )}
                         </div>
                         <button onClick={handleVerify} disabled={!playerId.trim() || isVerifying}
                             className="mt-4 px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-xl transition-all disabled:opacity-50 text-sm flex items-center gap-2">

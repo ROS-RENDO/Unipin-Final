@@ -252,37 +252,6 @@ app.post('/api/order/pay', async (req, res) => {
     }
 });
 
-// ────────────────────────────────────────────────────────────────────────────
-// STATE — Transaction History
-// ────────────────────────────────────────────────────────────────────────────
-
-// GET /api/history — returns all orders with their state
-app.get('/api/history', async (req, res) => {
-    try {
-        const ordersRes = await db.query('SELECT * FROM orders ORDER BY created_at DESC');
-        const txnsRes = await db.query('SELECT * FROM transactions');
-        
-        const formattedOrders = ordersRes.rows.map(row => {
-            return {
-                id: row.id,
-                gameCode: row.game_code,
-                playerId: row.player_id,
-                amount: row.amount,
-                state: row.state,
-                transactions: txnsRes.rows.filter(t => t.order_id === row.id).map(t => ({
-                    transactionId: t.id,
-                    paymentMethod: t.payment_method,
-                    amount: t.amount,
-                    status: t.status
-                }))
-            };
-        });
-        res.json({ success: true, orders: formattedOrders });
-    } catch (error) {
-        console.error('[History DB Error]', error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
 
 // ────────────────────────────────────────────────────────────────────────────
 // SSE — Live Log Stream Endpoint

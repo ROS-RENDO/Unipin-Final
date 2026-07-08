@@ -193,26 +193,7 @@
 				}
 			},
 			"response": []
-		},
-		{
-			"name": "Get Order History",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://localhost:3001/api/history",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "3001",
-					"path": [
-						"api",
-						"history"
-					]
-				}
-			},
-			"response": []
+
 		}
 	]
 }

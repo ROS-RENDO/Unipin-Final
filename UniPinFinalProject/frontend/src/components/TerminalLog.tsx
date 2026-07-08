@@ -8,135 +8,85 @@ interface LogLine {
 
 // Detect pattern tag and return color
 function getLineColor(msg: string): string {
-  if (msg.includes('[Singleton]'))         return '#f59e0b';
-  if (msg.includes('[Builder]'))           return '#10b981';
+  if (msg.includes('[Singleton]')) return '#f59e0b';
+  if (msg.includes('[Builder]')) return '#10b981';
   if (msg.includes('[AbstractFactory') || msg.includes('Factory]')) return '#8b5cf6';
-  if (msg.includes('[Strategy'))          return '#06b6d4';
-  if (msg.includes('[State'))             return '#ef4444';
+  if (msg.includes('[Strategy')) return '#06b6d4';
+  if (msg.includes('[State')) return '#ef4444';
   if (msg.includes('[Facade]') || msg.includes('[SSE]')) return '#f97316';
-  if (msg.includes('✅') || msg.includes('running'))     return '#34d399';
+  if (msg.includes('✅') || msg.includes('running')) return '#34d399';
   if (msg.includes('❌') || msg.includes('Error') || msg.includes('error')) return '#f87171';
   return '#94a3b8';
 }
 
 function getTagLabel(msg: string): string | null {
-  if (msg.includes('[Singleton]'))         return 'SINGLETON';
-  if (msg.includes('[Builder]'))           return 'BUILDER';
-  if (msg.includes('[AbstractFactory'))    return 'FACTORY';
-  if (msg.includes('[Strategy'))           return 'STRATEGY';
-  if (msg.includes('[State'))              return 'STATE';
-  if (msg.includes('[Facade]'))            return 'FACADE';
-  if (msg.includes('[SSE]'))               return 'SSE';
+  if (msg.includes('[Singleton]')) return 'SINGLETON';
+  if (msg.includes('[Builder]')) return 'BUILDER';
+  if (msg.includes('[AbstractFactory')) return 'FACTORY';
+  if (msg.includes('[Strategy')) return 'STRATEGY';
+  if (msg.includes('[State')) return 'STATE';
+  if (msg.includes('[Facade]')) return 'FACADE';
+  if (msg.includes('[SSE]')) return 'SSE';
   return null;
 }
 
-const TAG_BG: Record<string, string> = {
-  SINGLETON: '#f59e0b22',
-  BUILDER:   '#10b98122',
-  FACTORY:   '#8b5cf622',
-  STRATEGY:  '#06b6d422',
-  STATE:     '#ef444422',
-  FACADE:    '#f9731622',
-  SSE:       '#ffffff11',
+const TAG_COLORS: Record<string, { bg: string; border: string; text: string }> = {
+  SINGLETON: { bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.35)', text: '#f59e0b' },
+  BUILDER: { bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.35)', text: '#10b981' },
+  FACTORY: { bg: 'rgba(139,92,246,0.12)', border: 'rgba(139,92,246,0.35)', text: '#8b5cf6' },
+  STRATEGY: { bg: 'rgba(6,182,212,0.12)', border: 'rgba(6,182,212,0.35)', text: '#06b6d4' },
+  STATE: { bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.35)', text: '#ef4444' },
+  FACADE: { bg: 'rgba(249,115,22,0.12)', border: 'rgba(249,115,22,0.35)', text: '#f97316' },
+  SSE: { bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.12)', text: '#94a3b8' },
 };
 
 let lineId = 0;
 
-export default function TerminalLog() {
+interface Props {
+  open: boolean;
+  onToggle: () => void;
+}
+
+export default function TerminalLog({ open, onToggle }: Props) {
   const [logs, setLogs] = useState<LogLine[]>([]);
   const [connected, setConnected] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
-  
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const esRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     const es = new EventSource('http://localhost:3001/api/logs/stream');
     esRef.current = es;
-
     es.onopen = () => setConnected(true);
-
     es.onmessage = (e) => {
       try {
         const { message, ts } = JSON.parse(e.data);
         setLogs(prev => [...prev.slice(-200), { message, ts, id: ++lineId }]);
-        
-        // Increase unread count if sidebar is closed
-        setUnreadCount(prev => isOpen ? 0 : prev + 1);
-      } catch (_) {}
+      } catch (_) { }
     };
-
     es.onerror = () => setConnected(false);
 
-    return () => { 
-      es.close(); 
+    return () => {
+      es.close();
     };
-  }, [isOpen]);
+  }, []);
 
+  // Auto-scroll to bottom whenever new logs arrive (only when open)
   useEffect(() => {
-    if (isOpen) {
+    if (open) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-      setUnreadCount(0); // clear unread when opened
     }
-  }, [logs, isOpen]);
+  }, [logs, open]);
 
   const clear = () => setLogs([]);
 
   return (
     <>
-      {/* Floating Toggle Icon */}
-      <button 
-        onClick={() => setIsOpen(!isOpen)}
+      {/* Sidebar */}
+      <div
         style={{
           position: 'fixed',
-          bottom: '24px',
-          right: '24px',
-          zIndex: 10000,
-          background: '#0f172a',
-          color: '#e2e8f0',
-          border: '1px solid #1e293b',
-          borderRadius: '50%',
-          width: '56px',
-          height: '56px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '1.5rem',
-          cursor: 'pointer',
-          boxShadow: '0 4px 15px rgba(0,0,0,0.4)',
-          transition: 'transform 0.2s, background 0.2s',
-          outline: 'none',
-        }}
-        onMouseOver={(e) => e.currentTarget.style.background = '#1e293b'}
-        onMouseOut={(e) => e.currentTarget.style.background = '#0f172a'}
-        onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-        onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-      >
-        🧑‍💻
-        {unreadCount > 0 && (
-          <span style={{
-            position: 'absolute',
-            top: '-5px',
-            right: '-5px',
-            background: '#ef4444',
-            color: 'white',
-            fontSize: '0.7rem',
-            fontWeight: 'bold',
-            padding: '2px 6px',
-            borderRadius: '10px',
-            border: '2px solid #0f172a'
-          }}>
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </span>
-        )}
-      </button>
-
-      {/* Sidebar */}
-      <div 
-        style={{
-          position: 'fixed', 
-          right: isOpen ? '0' : '-450px', // slide out of view
+          right: open ? '0' : '-450px', // slide out of view
           top: 0,
           height: '100vh',
           width: '450px',
@@ -174,44 +124,55 @@ export default function TerminalLog() {
           >
             Clear
           </button>
-          
+
           <button
-            onClick={() => setIsOpen(false)}
+            onClick={onToggle}
             style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '1.2rem', cursor: 'pointer', padding: '0 0.5rem' }}
           >
             ✕
           </button>
         </div>
 
-        {/* Log body */}
-        <div style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '1rem',
-        }}>
+
+        {/* ── Log Body ── */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '0.75rem 1.25rem',
+            scrollbarWidth: 'thin',
+            scrollbarColor: '#1e293b transparent',
+          }}
+        >
           {logs.length === 0 && (
             <div style={{ color: '#475569', fontSize: '0.85rem', paddingTop: '1rem', textAlign: 'center', fontStyle: 'italic' }}>
               Listening to backend events...
             </div>
           )}
+
           {logs.map(line => {
             const tag = getTagLabel(line.message);
             const color = getLineColor(line.message);
-            const time = new Date(line.ts).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const tagColors = tag ? TAG_COLORS[tag] : null;
+            const time = new Date(line.ts).toLocaleTimeString('en-US', {
+              hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+
             return (
               <div key={line.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.8rem', marginBottom: '0.6rem', fontSize: '0.8rem', lineHeight: 1.5 }}>
                 {/* Timestamp */}
                 <span style={{ color: '#475569', flexShrink: 0 }}>{time}</span>
                 {/* Pattern tag badge */}
                 {tag ? (
-                  <span style={{ background: TAG_BG[tag] || '#ffffff10', color, border: `1px solid ${color}44`, borderRadius: '4px', padding: '0.1rem 0.5rem', fontSize: '0.7rem', fontWeight: 700, flexShrink: 0, minWidth: '6rem', textAlign: 'center' }}>
+                  <span style={{ background: tagColors?.bg || '#ffffff10', color: tagColors?.text || color, border: tagColors?.border ? `1px solid ${tagColors.border}` : `1px solid ${color}44`, borderRadius: '4px', padding: '0.1rem 0.5rem', fontSize: '0.7rem', fontWeight: 700, flexShrink: 0, minWidth: '6rem', textAlign: 'center' }}>
                     {tag}
                   </span>
                 ) : (
                   <span style={{ minWidth: '6rem', flexShrink: 0 }} />
                 )}
+
                 {/* Message */}
-                <span style={{ color, wordBreak: 'break-word', flex: 1, fontFamily: "'JetBrains Mono', 'Fira Code', 'Courier New', monospace" }}>
+                <span style={{ color, wordBreak: 'break-word', flex: 1 }}>
                   {line.message}
                 </span>
               </div>
